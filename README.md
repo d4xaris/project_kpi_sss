@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://media1.tenor.com/m/EYhZieWj-n4AAAAd/uno-reverse-card-break.gif">
+</p>
+
 <div align="center">
 
 # UNO! Game  
@@ -7,13 +11,18 @@
 </div>
 
 ---
-
+<div align="center">
+  
 ## tech stack
 
-- **TypeScript / JavaScript**
-- **Node.js**
-- **Git & GitHub**
-- **VS Code**
+</div>
+
+<p align="center">
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/javascript/javascript-original.svg" width="45" height="45"/>            
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/typescript/typescript-original.svg" width="45" height="45"/>
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original.svg" width="45" height="45"/>
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/git/git-original.svg" width="45" height="45"/>
+<img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/vscode/vscode-original.svg" width="45" height="45"/>
 
 ---
 
