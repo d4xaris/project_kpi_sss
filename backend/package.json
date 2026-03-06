@@ -1,0 +1,20 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.tsx",
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@prisma/client": "^7.4.2",
+    "dotenv": "^17.3.1",
+    "fastify": "^5.8.1",
+    "fastify-socket.io": "^5.1.0",
+    "prisma": "^7.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
