@@ -42,4 +42,44 @@
 
 ---
 ## Getting the project running for the first time
-Coming soon...
+
+### Install dependencies
+
+Backend:
+```bash
+cd backend
+yarn install
+```
+
+Frontend:
+```bash
+cd frontend
+yarn install
+```
+
+### Environment variables
+
+Create a `.env` file in `/backend`:
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/DB_NAME"
+JWT_SECRET="your_secret_key"
+```
+Make sure to update the values to match your local environment.
+
+### Running the project
+
+Backend:
+```bash
+cd backend
+yarn dev
+```
+
+Frontend:
+```bash
+cd frontend
+yarn dev
+```
+
+### URLs
+- Frontend: http://localhost:5173
+- Backend: http://localhost:3000
