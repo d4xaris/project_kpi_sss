@@ -6,7 +6,7 @@
     "lib": ["ES2020"],
     "types": ["node"],
 
-    "rootDir": "./",
+    "rootDir": "./src",
     "outDir": "./dist",
     "sourceMap": true,
     "declaration": true,
@@ -14,14 +14,12 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
-    
+
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    "exactOptionalPropertyTypes": false,
-    
-    "jsx": "react-jsx"
+    "exactOptionalPropertyTypes": false
   },
-  "include": ["**/*.ts", ".env"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
