@@ -4,11 +4,5 @@ interface SSSCardProps {
 }
 
 export default function SSSCard({ id, height = 120 }: SSSCardProps) {
-  return (
-    <img 
-      src={`/cards/${id}.svg`} 
-      height={height} 
-      alt={id}
-    />
-  );
+  return <img src={`/cards/${id}.svg`} height={height} alt={id} />;
 }
