@@ -1,21 +1,17 @@
 <p align="center">
-  <img src="https://media1.tenor.com/m/EYhZieWj-n4AAAAd/uno-reverse-card-break.gif">
+  <img width="1281" height="336" alt="Image" src="https://github.com/user-attachments/assets/87072268-4888-46e0-ba04-317480d5a28e" />
 </p>
 
-<div align="center">
 
-# Project SSS!  
-### Team Project · 2026  
-*A multiplayer card game.*
-
-</div>
+<img width="1281" height="157" alt="Image" src="https://github.com/user-attachments/assets/c4aedc48-0d07-413e-9627-2b104b613222" />
 
 ---
-<div align="center">
   
-## tech stack
+
 
 <div align="center">
+
+## tech stack
 
 ### Frontend Stack
 ![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
@@ -30,7 +26,7 @@
 ![PostgreSQL](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 
-</div>
+
 
 👥 **Made by**  
 [@d4xaris](https://github.com/d4xaris) · [@Honike-1](https://github.com/Honike-1) · [@X0nexed](https://github.com/X0nexed)
