@@ -1,6 +1,25 @@
-:root {
-  --background: #0f0f0f;
-  --surface: #1a1a1a;
-  --accent: #e63946;
-  --muted: #888888;
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800;900&family=Pacifico&display=swap");
+
+body,
+html {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #9f00f5 0%, #a855f7 50%, #9ba5ff 100%)
+    no-repeat fixed;
+  background-size: cover;
+  font-family: "Poppins", sans-serif;
 }
+
+.home {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.btn {
+}
+

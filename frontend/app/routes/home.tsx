@@ -1,11 +1,11 @@
-import SSSCard from "../components/SSSCard";
+import { useNavigate } from "react-router";
+import Button from "~/components/Button";
 
 export default function Home() {
+  const navigate = useNavigate();
+
   return (
-    <div>
-      <SSSCard id="crimson_5" />
-      <SSSCard id="back" />
-      <SSSCard id="orange_3" />
+    <div className="home">
     </div>
   );
 }
