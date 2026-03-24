@@ -24,13 +24,13 @@ model User {
 }
 
 model GameSession {
-  id             Int      @id @default(autoincrement())
-  sessionName    String
-  status         String   @default("LOBBY") //all options: "LOBBY" "PLAYING" "ENDED"
-  isPrivate      Boolean  @default(false)
-  password       String?
-  maxPlayers     Int      @default(4)
-  players        User[]   //players ids will save here and it will show all the players when we will open the statistic
-  hostId         Int
-  host           User     @relation("GameHost", fields: [hostId], references: [id]) //this shi must give the id of host player, so he can change setting of game
+  id           Int      @id @default(autoincrement())
+  sessionName  String
+  status       String   @default("LOBBY") //all options: "LOBBY" "PLAYING" "ENDED"
+  isPrivate    Boolean  @default(false)
+  password     String?
+  maxPlayers   Int      @default(4)
+  players      User[]   //players ids will save here and it will show all the players when we will open the statistic
+  hostId       Int
+  host         User     @relation("GameHost", fields: [hostId], references: [id]) //this shi must give the id of host player, so he can change setting of game
 }
