@@ -1,15 +1,23 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800;900&family=Pacifico&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Hammersmith+One&family=Poppins:wght@400;600;700&display=swap');
 
+/* ======= Для всієї аплікації ======= */
 body,
 html {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background: linear-gradient(135deg, #9f00f5 0%, #a855f7 50%, #9ba5ff 100%)
-    no-repeat fixed;
+  background: linear-gradient(to right, #9f00f5, #9ba5ff);
   background-size: cover;
   font-family: "Poppins", sans-serif;
+  
 }
+
+h1, h2, h3 {
+  font-family: 'Hammersmith One', sans-serif;
+}
+
+/* ======= Хом пейдж ======= */
 
 .home {
   min-height: 100vh;
@@ -18,8 +26,76 @@ html {
   align-items: center;
   justify-content: center;
   position: relative;
+  flex-direction: column;
 }
 
-.btn {
+.home-content p {
+  margin: 0;
+  padding: 0;
+  color: white;
 }
 
+.home-content {
+  text-align: center;
+  margin-top: 100px;
+  position: relative;
+  z-index: 1;
+  user-select: none;
+}
+
+.home-content p:nth-child(1) {
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.home-content  p:nth-child(2) {
+  font-size: 1.2rem;
+  font-style: italic;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.home img {
+  width: 500px;
+  height: auto;
+  display: auto;
+  margin: 0 auto; 
+  position: fixed;
+  transform: translateY(-100px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ======= Кнопачка ======= */
+
+.button-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  align-items: center;
+  text-align: center;
+  margin-top: 16px;
+}
+
+.btn--solid {
+  background: white;
+  border-radius: 200px;
+  padding: 10px 10px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  color: #9f00f5;
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+}
+
+.btn--underline {
+  background: none;
+  border: none;
+  text-decoration: underline;
+  color: white;
+  cursor: pointer;
+  font-style: italic;
+  font-size: 1rem;
+  font-family: 'Poppins', sans-serif;
+}
