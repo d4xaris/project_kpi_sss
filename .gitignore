@@ -2,8 +2,12 @@ node_modules
 .DS_Store
 .env
 /node_modules/
+.idea/
 
 # React Router
 /.react-router/
 /build/
 .react-router
+
+.postman
+postman
