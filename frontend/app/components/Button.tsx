@@ -7,7 +7,7 @@ type ButtonParam = {
 export default function Button({ text, variant, onClick }: ButtonParam) {
   return (
     <button className={`btn btn--${variant}`} onClick={onClick}>
-    {text}
+      {text}
     </button>
   );
 }
