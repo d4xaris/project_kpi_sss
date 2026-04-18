@@ -1,22 +1,34 @@
 import type { FastifyInstance } from "fastify";
 
 export default async function gameRoutes(app: FastifyInstance) {
-  app.post("/game/create", async (request, reply) => {
-    const { sessionName, maxPlayers } = request.body as {
-      sessionName: string;
-      maxPlayers: number;
-    };
+  app.post(
+    "/game/create",
+    { preValidation: [(app as any).authenticate] },
+    async (request, reply) => {
+      const user = request.user as {
+        id: number;
+        nickname: string;
+      };
 
-    const game = await app.prisma.GameSession.create({
-      data: {
-        sessionName: sessionName,
-        maxPlayers: maxPlayers,
-        hostId: 1, // right now doesnt work, will work on it later
-      },
-    });
+      const { sessionName, maxPlayers } = request.body as {
+        sessionName: string;
+        maxPlayers: number;
+      };
 
-    reply.status(201).send(game);
-  }); // this thing will be connected to front but rn idk how, just mark for future
+      const game = await app.prisma.GameSession.create({
+        data: {
+          sessionName: sessionName,
+          maxPlayers: maxPlayers,
+          hostId: user.id,
+          players: {
+            connect: { id: user.id },
+          },
+        },
+      });
+
+      reply.status(201).send(game);
+    },
+  ); // this thing will be connected to front but rn idk how, just mark for future
 
   app.get("/game/:id/status", async (request, reply) => {
     const { id } = request.params as { id: string };
