@@ -16,7 +16,7 @@ datasource db {
 model User {
   id           Int            @id @default(autoincrement())
   login        String         @unique
-  nickname     String?
+  nickname     String
   totalWins    Int            @default(0)
   password     String         //probably because idk rn
   session      GameSession[]  //this will connect players to sessions, i guess
@@ -27,8 +27,6 @@ model GameSession {
   id           Int      @id @default(autoincrement())
   sessionName  String
   status       String   @default("LOBBY") //all options: "LOBBY" "PLAYING" "ENDED"
-  isPrivate    Boolean  //@default(false)
-  password     String?
   maxPlayers   Int      //@default(4)
   players      User[]   //players ids will save here and it will show all the players when we will open the statistic
   hostId       Int

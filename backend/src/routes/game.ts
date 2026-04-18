@@ -3,26 +3,35 @@ import { request } from "node:http"; // idk what is this line, it just appered a
 
 export default async function gameRoutes(app: FastifyInstance) {
   app.post("/game/create", async (request, reply) => {
-    const { sessionName, maxPlayers, isPrivate, password } = request.body as {
+    const { sessionName, maxPlayers } = request.body as {
       sessionName: string;
       maxPlayers: number;
-      isPrivate: boolean; // will think later about it
-      password?: number;
     };
 
     const game = await app.prisma.GameSession.create({
       data: {
         sessionName: sessionName,
         maxPlayers: maxPlayers,
-        isPrivate: isPrivate,
-        password: password ?? null,
         hostId: 1, // right now doesnt work, will work on it later
       },
     });
 
-    // probably need to add smth that will make error if isPrivate: true, but password: null
-    // rn idk how or what to do with this, will think about it later
-
     reply.status(201).send(game);
   }); // this thing will be connected to front but rn idk how, just mark for future
+
+  app.get("/game/:id/status", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const game = await app.prisma.GameSession.findUnique({
+      where: { id: Number(id) },
+      include: {
+        players: true,
+      },
+    });
+
+    if (!game) {
+      return reply.status(404).send({ error: "Game not found" });
+      // I a bit not understand how this send({error}) works but let it be here
+    }
+  });
 }
