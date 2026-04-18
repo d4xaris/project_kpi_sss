@@ -1,5 +1,4 @@
 import type { FastifyInstance } from "fastify";
-import { request } from "node:http"; // idk what is this line, it just appered after I used request in app.post
 
 export default async function gameRoutes(app: FastifyInstance) {
   app.post("/game/create", async (request, reply) => {
