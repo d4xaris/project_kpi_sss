@@ -18,7 +18,7 @@ model User {
   login        String         @unique
   nickname     String
   totalWins    Int            @default(0)
-  password     String         //probably because idk rn
+  password     String         
   session      GameSession[]  //this will connect players to sessions, i guess
   hostedGames  GameSession[]  @relation("GameHost")
 }

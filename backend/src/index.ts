@@ -1,10 +1,12 @@
 import Fastify from "fastify";
 
 import gameRoutes from "./routes/game.js";
+import authRoutes from "./routes/auth.js";
 
 const app = Fastify({ logger: true });
 
 app.register(gameRoutes, { prefix: "/game" });
+app.register(authRoutes, { prefix: "/auth" });
 
 // plugins
 // routes
