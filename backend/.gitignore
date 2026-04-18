@@ -1,6 +1,14 @@
 node_modules
-# Keep environment variables out of version control
+.DS_Store
 .env
+/node_modules/
+.idea/
 
-/src/generated/prisma
+# React Router
+/.react-router/
+/build/
+.react-router
+
+.postman
+postman
 test.ts

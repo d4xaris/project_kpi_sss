@@ -1,6 +1,7 @@
 export class Deck {}
-type CardColor = 'crimson' | 'yellow' | 'orange' | 'purple' | 'Black'; //массив цветов
-type CardValue = |'0'| '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'Skip' | 'Reverse' | 'Draw+2' | 'black-change' | 'black+4-change'; //массив действий кард
+type CardColor = 'crimson' | 'yellow' | 'orange' | 'purple' | 'Wild'; //массив цветов
+type CardValue = |'0'| '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'Skip' | 'Reverse' | 'Draw+2' | 'black-change' | 'black+4-change';
+//массив карт
 interface Card{
     color: CardColor;
     value: CardValue;
@@ -17,13 +18,13 @@ class Decka {
         const blackPlusFourChange = 'black+4-change';
         for (let i = 0; i < 4; i++) {
             this.cards.push( {
-                color: 'Black',
+                color: 'Wild',
                 value: 'black+4-change',
             }); // генерация 4 черных карт первого вида
         }
         for (let i = 0; i < 4; i++) {
             this.cards.push({
-                color: 'Black',
+                color: 'Wild',
                 value: 'black-change',
             }); // генерация 4 черных карт второго вида
         }
@@ -37,7 +38,7 @@ class Decka {
                     this.cards.push({
                         color: color,
                         value: value,
-                    }); // генерация всех карт
+                    }); // генерация всех ост карт
 
                 }
             }
@@ -54,11 +55,19 @@ class Decka {
             this.cards[i] = this.cards[j] as Card;
             this.cards[j] = temp;
         }
-
     } // тасование карт алгоритмом Фишера-Йетса
-
+    draw(count: number) {
+        const actualCount = Math.min(count, this.cards.length);
+        if (count <= 0) {
+            return [];
+        }
+        return this.cards.splice(0, actualCount);
+    }
 }
-
-const myDeck = new Decka();
-myDeck.shuffle();
-console.table(myDeck.getCards());
+    // const myDeck = new Decka();
+    // myDeck.shuffle();
+    // const discard = myDeck.getCards().splice(0 ,100);
+    // const drawCards = myDeck.draw(5);
+    // console.table(discard);
+    // console.log(myDeck)
+    // console.log(drawCards);
