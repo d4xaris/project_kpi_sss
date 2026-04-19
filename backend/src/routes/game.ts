@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { GameRoom } from "../game/GameRoom.js";
 
 export default async function gameRoutes(app: FastifyInstance) {
   app.addHook("preValidation", (app as any).authenticate);
@@ -42,5 +43,36 @@ export default async function gameRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "Game not found" });
       // I a bit not understand how this send({error}) works but let it be here
     }
+  });
+
+  app.post("/game/:id/start", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const gameId = Number(id);
+
+    const game = await app.prisma.GameSession.findUnique({
+      where: { id: gameId },
+      include: { players: true },
+    });
+
+    if (!game) {
+      return reply.status(404).send({ error: "Game not found" });
+    }
+
+    const totalPlayers = game.players.length;
+
+    const room = new GameRoom(totalPlayers);
+    // next line is the function of game settings which will be used in game(can't do it right now)
+    // const gameSettings = room.function_of_settings_calculation()
+
+    await app.prisma.GameSession.update({
+      where: { id: gameId },
+      data: { status: "PLAYING" },
+    });
+
+    return reply.send({
+      messege: "Game started",
+      playersCount: totalPlayers,
+      //gameSettings: gameSettings
+    });
   });
 }
