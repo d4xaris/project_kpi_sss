@@ -1,7 +1,7 @@
 export class GameRoom {
-  private playersAmount: number = 0;
+  private players: number[] = [];
 
-  constructor(playersCount: number) {
-    this.playersAmount = playersCount;
+  constructor(ids: number[]) {
+    this.players = ids;
   } //this is for the amount of players
 }

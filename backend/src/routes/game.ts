@@ -58,9 +58,9 @@ export default async function gameRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "Game not found" });
     }
 
-    const totalPlayers = game.players.length;
+    const players = game.players.map((p: any) => p.id);
 
-    const room = new GameRoom(totalPlayers);
+    const room = new GameRoom(players);
     // next line is the function of game settings which will be used in game(can't do it right now)
     // const gameSettings = room.function_of_settings_calculation()
 
@@ -71,7 +71,7 @@ export default async function gameRoutes(app: FastifyInstance) {
 
     return reply.send({
       messege: "Game started",
-      playersCount: totalPlayers,
+      players: players,
       //gameSettings: gameSettings
     });
   });
