@@ -12,34 +12,26 @@ export default function Settings() {
     <div className="settings">
       <div className="settings-content">
         <h1>Settings</h1>
-        
+
         <div className="settings-row">
           <span>Music Volume</span>
-          <Slider
-           value={musicVolume}
-           onChange={setMusicVolume}
-          />
+          <span className="settings-pct">{musicVolume}%</span>
+          <Slider value={musicVolume} onChange={setMusicVolume} />
         </div>
-        
+
         <div className="settings-row">
           <span>Sound Volume</span>
-          <Slider
-           value={soundVolume}
-           onChange={setSoundVolume}
-          />
+          <span className="settings-pct">{soundVolume}%</span>
+          <Slider value={soundVolume} onChange={setSoundVolume} />
         </div>
 
         <div className="settings-actions">
-           <Button
+          <Button
             text="Go back"
             variant="underline"
             onClick={() => navigate("/")}
-           />
-           <Button
-            text="Save"
-            variant="solid"
-            onClick={() => {}}
-           />
+          />
+          <Button text="Save" variant="solid" onClick={() => {}} />
         </div>
       </div>
     </div>

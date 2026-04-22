@@ -107,6 +107,11 @@ span {
   justify-items: center;
 }
 
+.button-grid:has(> :only-child) {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
 .btn--solid {
   background: white;
   border-radius: 200px;
@@ -282,4 +287,145 @@ span {
   border-radius: 200px;
   background: linear-gradient(to right, #d989ff, #5ce1e6);
   pointer-events: none;
+}
+
+.settings-pct {
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  min-width: 48px;
+  text-align: right;
+}
+
+/* ======= Login.tsx ======= */
+
+.login {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.login-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.login-input {
+  background: transparent;
+  border: 2px solid white;
+  border-radius: 200px;
+  padding: 10px 20px;
+  color: white;
+  font-family: "Poppins", sans-serif;
+  font-size: 1rem;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.login-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+.login-error {
+  color: #ff6b6b;
+  font-size: 0.9rem;
+}
+
+.login-bottom {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.login-content p {
+  margin-top: -12px;
+  opacity: 0.9;
+}
+
+.login-success {
+  color: #a8ffb0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ======= Account corner ======= */
+
+.account-corner {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+}
+
+.account-btn {
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+  border-radius: 200px;
+  padding: 8px 20px;
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.account-dropdown {
+  position: absolute;
+  right: 0;
+  top: 48px;
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 160px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+
+.account-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #9f00f5;
+  color: white;
+  font-size: 1.4rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Poppins", sans-serif;
+}
+
+.account-dropdown span {
+  color: #9f00f5;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.account-logout {
+  background: none;
+  border: none;
+  color: #9f00f5;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  cursor: pointer;
+  font-style: italic;
 }
