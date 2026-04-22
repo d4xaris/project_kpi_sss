@@ -429,3 +429,94 @@ span {
   cursor: pointer;
   font-style: italic;
 }
+
+/* ======= Stats.tsx ======= */
+
+.stat-wins {
+  font-weight: 700;
+  background: linear-gradient(
+    67deg,
+    #ffc32b 0%,
+    #ffd700 40%,
+    #fffacd 55%,
+    #ffd700 70%,
+    #ffc635 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8));
+  animation: shine-sweep 1.8s linear infinite;
+}
+
+@keyframes shine-sweep {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+/* ======= HowToPlay.tsx ======= */
+
+.how {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.how-content {
+  width: 100%;
+  max-width: 900px;
+  padding: 40px;
+  color: white;
+  user-select: none;
+  text-align: center;
+}
+
+.how-cards {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.how-subtitle {
+  font-style: italic;
+  opacity: 0.9;
+  margin-top: 4px !important;
+  margin-bottom: 40px !important;
+}
+
+.how-card {
+  background: linear-gradient(160deg, rgba(159, 0, 245) 0%, rgba(155, 165, 255) 100%);
+  border-radius: 20px;
+  padding: 24px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: -8px 8px 0px rgba(137, 117, 250);
+}
+
+.how-card-title {
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: white;
+}
+
+.how-card-description {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}

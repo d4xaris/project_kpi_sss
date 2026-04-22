@@ -12,8 +12,8 @@ export function useAuth() {
 
   useEffect(() => {
     // Анкомент - то для бета тесту акк
-    //  setUser({ id: 1, nickname: "TestUser67" });
-    //  setIsLoading(false);
+     setUser({ id: 1, nickname: "TestUser67" });
+     setIsLoading(false);
 
     const token = localStorage.getItem("token");
     const savedUser = localStorage.getItem("user");
