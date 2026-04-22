@@ -4,6 +4,7 @@ import { GameRoom } from "../game/GameRoom.js";
 export default async function gameRoutes(app: FastifyInstance) {
   app.addHook("preValidation", (app as any).authenticate);
 
+  // for creating the game
   app.post("/game/create", async (request, reply) => {
     const user = request.user as {
       id: number;
@@ -29,6 +30,7 @@ export default async function gameRoutes(app: FastifyInstance) {
     reply.status(201).send(game);
   }); // this thing will be connected to front but rn idk how, just mark for future
 
+  // for seeing status of game
   app.get("/game/:id/status", async (request, reply) => {
     const { id } = request.params as { id: string };
 
@@ -45,6 +47,7 @@ export default async function gameRoutes(app: FastifyInstance) {
     }
   });
 
+  // for start of the game
   app.post("/game/:id/start", async (request, reply) => {
     const { id } = request.params as { id: string };
     const gameId = Number(id);
