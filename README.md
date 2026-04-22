@@ -75,8 +75,4 @@ yarn dev
 
 ### URLs
 - Frontend: http://localhost:5173
-<<<<<<< HEAD
 - Backend: http://localhost:3000
-=======
-- Backend: http://localhost:3000
->>>>>>> 23862a8a25767cd389bb0270e06c384c21b7b774
