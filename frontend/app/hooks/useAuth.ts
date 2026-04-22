@@ -10,7 +10,7 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  useEffect(() => {-
     // Анкомент - то для бета тесту акк
      setUser({ id: 1, nickname: "TestUser67" });
      setIsLoading(false);

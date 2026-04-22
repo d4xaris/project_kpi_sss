@@ -10,4 +10,5 @@ export default [
   route("stats", "routes/Stats.tsx"),
   route("create", "routes/Create.tsx"),
   route("room", "routes/Room.tsx"),
+  route("game", "routes/Game.tsx"),
 ] satisfies RouteConfig;
