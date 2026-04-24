@@ -28,7 +28,7 @@ export default async function gameRoutes(app: FastifyInstance) {
     });
 
     reply.status(201).send(game);
-  }); // this thing will be connected to front but rn idk how, just mark for future
+  });
 
   // for seeing status of game
   app.get("/game/:id/status", async (request, reply) => {
@@ -43,7 +43,6 @@ export default async function gameRoutes(app: FastifyInstance) {
 
     if (!game) {
       return reply.status(404).send({ error: "Game not found" });
-      // I a bit not understand how this send({error}) works but let it be here
     }
   });
 

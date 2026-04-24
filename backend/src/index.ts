@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import 'dotenv/config';
+import "dotenv/config";
 
 import gameRoutes from "./routes/game.js";
 import authRoutes from "./routes/auth.js";
@@ -10,8 +10,7 @@ await app.register(authPlugin);
 
 app.register(gameRoutes, { prefix: "/game" });
 app.register(authRoutes, { prefix: "/auth" });
-
-
+app.register(import("./plugins/cors.js"));
 
 // routes
 // socket
