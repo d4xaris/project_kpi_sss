@@ -52,8 +52,8 @@ export class Deck {
         return this.cards.splice(0, actualCount);
     }
 }
-// const myDeck = new Decka();
-// myDeck.shuffle();
+//const myDeck = new Deck();
+//myDeck.shuffle();
 // const discard = myDeck.getCards().splice(0, 100);
 // const drawCards = myDeck.draw(5);
 // console.table(discard);
