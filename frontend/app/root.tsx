@@ -12,7 +12,7 @@ export default function Root() {
         <Links />
         <link rel="icon" type="image/png" href="/favicon.png?v2" />
       </head>
-      <body className="home">
+      <body>
         <Outlet />
         <Scripts />
       </body>

@@ -1,15 +1,24 @@
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800;900&family=Pacifico&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Hammersmith+One&family=Poppins:wght@400;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&family=Hammersmith+One&display=swap");
 
 /* ======= Для всієї аплікації ======= */
-body,
-html {
+
+@property --bg-angle {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 90deg;
+}
+
+body, html {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background: linear-gradient(to right, #9f00f5, #9ba5ff);
-  background-size: cover;
+  background: linear-gradient(var(--bg-angle), #9f00f5, #9ba5ff);
+  transition: --bg-angle 1.8s cubic-bezier(0.25, 0.1, 0.25, 1);
   font-family: "Poppins", sans-serif;
+}
+
+body.tab-hidden {
+  transition: none;
 }
 
 h1,
@@ -29,6 +38,11 @@ span {
   color: white;
   margin: 0;
   user-select: none;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
 /* ======= Хом пейдж ======= */
@@ -78,6 +92,12 @@ span {
   transform: translateY(-100px);
   pointer-events: none;
   z-index: 0;
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(-100px); }
+  50%       { transform: translateY(-103px); }
 }
 
 /* ======= Пасхалочкі :P ======= */
@@ -521,6 +541,21 @@ span {
   line-height: 1.5;
 }
 
+.how-card-description .secret {
+  background: linear-gradient(90deg, #ff6b6b, #ffd700, #a8ff78, #5ce1e6, #9b59b6, #ff6b6b);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rainbow 3s linear infinite;
+  font-weight: 700;
+}
+
+@keyframes rainbow {
+  0% { background-position: 0% center; }
+  100% { background-position: 300% center; }
+}
+
 /* ======= Lobby.tsx ======= */
 
 .lobby {
@@ -549,6 +584,7 @@ span {
   align-items: center;
   padding: 20px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  animation: fadeSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .lobby-name {
@@ -628,3 +664,65 @@ span {
 .game-card:hover {
   transform: translateY(-16px);
 }
+
+/* ================================ АНІМАШКИ УРААААА ================================= */
+/* ======= Button animations ======= */
+
+.btn--solid {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease;
+}
+
+.btn--solid:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(159, 0, 245, 0.3);
+}
+
+.btn--solid:active {
+  transform: translateY(0px);
+  box-shadow: none;
+}
+
+.btn--underline {
+  transition: opacity 0.2s ease;
+}
+
+.btn--underline:hover {
+  opacity: 0.7;
+}
+
+/* ======= Page enter animations ======= */
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.home-content,
+.create-content,
+.settings-content,
+.how-content,
+.lobby-content,
+.login-content,
+.play-content {
+  animation: fadeSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* stagger how-cards */
+.how-card:nth-child(1) { animation: fadeSlideUp 0.5s 0.1s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.how-card:nth-child(2) { animation: fadeSlideUp 0.5s 0.2s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.how-card:nth-child(3) { animation: fadeSlideUp 0.5s 0.3s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.how-card:nth-child(4) { animation: fadeSlideUp 0.5s 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+/* stagger lobby rows */
+.lobby-row:nth-child(1) { animation: fadeSlideUp 0.5s 0.1s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.lobby-row:nth-child(2) { animation: fadeSlideUp 0.5s 0.2s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.lobby-row:nth-child(3) { animation: fadeSlideUp 0.5s 0.3s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.lobby-row:nth-child(4) { animation: fadeSlideUp 0.5s 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
