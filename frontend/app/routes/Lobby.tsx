@@ -11,10 +11,10 @@ export default function Lobby() {
         <h1>Join a room</h1>
         <hr />
 
-        {MOCK_ROOMS.map((room) => {
+        {MOCK_ROOMS.map((room, i) => {
           const full = room.players >= room.maxPlayers;
           return (
-            <div className="lobby-row" key={room.id}>
+            <div className="lobby-row" key={room.id} style={{ animationDelay: `${i * 0.1}s` }}>
               <span className="lobby-name">{room.name}</span>
               <span className="lobby-count">{room.players}/{room.maxPlayers}</span>
               <button
@@ -29,7 +29,7 @@ export default function Lobby() {
         })}
 
         <div className="create-actions">
-          <Button text="Go back" variant="underline" onClick={() => navigate("/")} />
+          <Button text="Go back" variant="underline" onClick={() => navigate("/play")} />
         </div>
       </div>
     </div>

@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router";
 import Button from "~/components/Button";
 import HowToPlayCard from "~/components/HowToPlayCard";
+import type { ReactNode } from "react";
 
-const CARDS = [
+const CARDS: { title: string; description: ReactNode }[] = [
   {
     title: "The goal",
     description: "Be the first player to get rid of all your cards!",
@@ -13,7 +14,7 @@ const CARDS = [
   },
   {
     title: "Special cards",
-    description: "Skip, Reverse, Draw Two/Four and even Wild cards! Watch out for our secret card...",
+    description: <>Skip, Reverse, Draw Two/Four and even Wild cards! Watch out for our <span className="secret">secret card...</span></>,
   },
   {
     title: "Last card!",

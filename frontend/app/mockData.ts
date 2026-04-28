@@ -2,6 +2,8 @@ export const MOCK_ROOMS = [
   { id: "1", name: "Name1", players: 2, maxPlayers: 4 },
   { id: "2", name: "Name2", players: 4, maxPlayers: 4 },
   { id: "3", name: "Name3", players: 1, maxPlayers: 4 },
+  { id: "4", name: "Name4", players: 4, maxPlayers: 4 }, 
+  { id: "5", name: "Name5", players: 2, maxPlayers: 4 }, 
 ];
 
 export const MOCK_HAND = [
@@ -11,6 +13,10 @@ export const MOCK_HAND = [
   { color: 'orange', value: '4' },
   { color: 'wild', value: 'wild' },
   { color: 'crimson', value: 'reverse' },
+];
+
+export const MOCK_GAME_STATE = [
+
 ];
 
 export const MOCK_ROOM = {
