@@ -1,12 +1,11 @@
-export class Deck {}
 type CardColor = 'crimson' | 'yellow' | 'orange' | 'purple' | 'wild'; //массив цветов
 type CardValue = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'skip' | 'reverse' | 'drawtwo' | 'wild' | 'wild_draw4';
 //массив карт
-interface Card{
+export interface Card{
     color: CardColor;
     value: CardValue;
 }// интерфейс карт
-class Decka {
+export class Deck {
     private cards: Card[] = [];
 
     constructor() {
