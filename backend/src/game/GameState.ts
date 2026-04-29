@@ -1,9 +1,7 @@
 import {type Card} from "./Deck.js";
 import {Deck} from "./Deck.js";
 export class GameState {
-    ids = [1, 2, 3];
     private deck: Card[];
-    private id = this.ids;
     private playerIds: number[];
     private playerHands: Map<number, Card[]>;
 
@@ -11,5 +9,9 @@ export class GameState {
         this.deck = startingCards;
         this.playerIds = ids;
         this.playerHands = new Map();
+        for (const ids of this.playerIds) {
+            const hand = this.deck.splice(0, 7);
+            this.playerHands.set(ids, hand);
+        }
     };
 }
