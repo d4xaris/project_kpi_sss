@@ -5,6 +5,7 @@ import { useNavigate } from "react-router";
 function Stars() {
   const [stars, setStars] = useState<any[]>([]);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     setStars(Array.from({ length: 60 }, (_, i) => ({
@@ -19,15 +20,15 @@ function Stars() {
   }, []);
 
   useEffect(() => {
-  const handleContextMenu = (e: MouseEvent) => {
-    if (location.pathname.startsWith("/game") || location.pathname.startsWith("/room")) return;
-    e.preventDefault();
-    navigate(-1);
-  };
+    const handleContextMenu = (e: MouseEvent) => {
+      if (location.pathname.startsWith("/game") || location.pathname.startsWith("/room")) return;
+      e.preventDefault();
+      navigate(-1);
+    };
 
-  window.addEventListener("contextmenu", handleContextMenu);
-  return () => window.removeEventListener("contextmenu", handleContextMenu);
-}, [location.pathname]);
+    window.addEventListener("contextmenu", handleContextMenu);
+    return () => window.removeEventListener("contextmenu", handleContextMenu);
+  }, [location.pathname]);
 
   return (
     <>
@@ -52,9 +53,8 @@ function Stars() {
 
 export default function Layout() {
   const location = useLocation();
-  const navigate = useNavigate();
   const angleRef = useRef(90);
-  const noStars = ["/game", "/room"].includes(location.pathname);
+  const noStars = location.pathname.startsWith("/game") || location.pathname.startsWith("/room");
 
   useEffect(() => {
     angleRef.current += 45;
