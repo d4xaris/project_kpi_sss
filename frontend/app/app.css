@@ -1,15 +1,24 @@
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800;900&family=Pacifico&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Hammersmith+One&family=Poppins:wght@400;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&family=Hammersmith+One&display=swap");
 
 /* ======= Для всієї аплікації ======= */
-body,
-html {
+
+@property --bg-angle {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 90deg;
+}
+
+body, html {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background: linear-gradient(to right, #9f00f5, #9ba5ff);
-  background-size: cover;
+  background: linear-gradient(var(--bg-angle), #9f00f5, #9ba5ff);
+  transition: --bg-angle 1.8s cubic-bezier(0.25, 0.1, 0.25, 1);
   font-family: "Poppins", sans-serif;
+}
+
+body.tab-hidden {
+  transition: none;
 }
 
 h1,
@@ -29,6 +38,11 @@ span {
   color: white;
   margin: 0;
   user-select: none;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
 }
 
 /* ======= Хом пейдж ======= */
@@ -78,6 +92,12 @@ span {
   transform: translateY(-100px);
   pointer-events: none;
   z-index: 0;
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(-100px); }
+  50%       { transform: translateY(-103px); }
 }
 
 /* ======= Пасхалочкі :P ======= */
@@ -104,6 +124,11 @@ span {
   align-items: center;
   text-align: center;
   margin-top: 16px;
+  justify-items: center;
+}
+
+.button-grid:has(> :only-child) {
+  grid-template-columns: 1fr;
   justify-items: center;
 }
 
@@ -283,3 +308,421 @@ span {
   background: linear-gradient(to right, #d989ff, #5ce1e6);
   pointer-events: none;
 }
+
+.settings-pct {
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  min-width: 48px;
+  text-align: right;
+}
+
+/* ======= Login.tsx ======= */
+
+.login {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.login-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.login-input {
+  background: transparent;
+  border: 2px solid white;
+  border-radius: 200px;
+  padding: 10px 20px;
+  color: white;
+  font-family: "Poppins", sans-serif;
+  font-size: 1rem;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.login-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+.login-error {
+  color: #ff6b6b;
+  font-size: 0.9rem;
+}
+
+.login-bottom {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.login-content p {
+  margin-top: -12px;
+  opacity: 0.9;
+}
+
+.login-success {
+  color: #a8ffb0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ======= Account corner ======= */
+
+.account-corner {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+}
+
+.account-btn {
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+  border-radius: 200px;
+  padding: 8px 20px;
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.account-dropdown {
+  position: absolute;
+  right: 0;
+  top: 48px;
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 160px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+
+.account-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #9f00f5;
+  color: white;
+  font-size: 1.4rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Poppins", sans-serif;
+}
+
+.account-dropdown span {
+  color: #9f00f5;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.account-logout {
+  background: none;
+  border: none;
+  color: #9f00f5;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  cursor: pointer;
+  font-style: italic;
+}
+
+/* ======= Stats.tsx ======= */
+
+.stat-wins {
+  font-weight: 700;
+  background: linear-gradient(
+    67deg,
+    #ffc32b 0%,
+    #ffd700 40%,
+    #fffacd 55%,
+    #ffd700 70%,
+    #ffc635 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.8));
+  animation: shine-sweep 1.8s linear infinite;
+}
+
+@keyframes shine-sweep {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+/* ======= HowToPlay.tsx ======= */
+
+.how {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.how-content {
+  width: 100%;
+  max-width: 900px;
+  padding: 40px;
+  color: white;
+  user-select: none;
+  text-align: center;
+}
+
+.how-cards {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.how-subtitle {
+  font-style: italic;
+  opacity: 0.9;
+  margin-top: 4px !important;
+  margin-bottom: 40px !important;
+}
+
+.how-card {
+  background: linear-gradient(160deg, rgba(159, 0, 245) 0%, rgba(155, 165, 255) 100%);
+  border-radius: 20px;
+  padding: 24px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: -8px 8px 0px rgba(137, 117, 250);
+}
+
+.how-card-title {
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: white;
+}
+
+.how-card-description {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+.how-card-description .secret {
+  background: linear-gradient(90deg, #ff6b6b, #ffd700, #a8ff78, #5ce1e6, #9b59b6, #ff6b6b);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rainbow 3s linear infinite;
+  font-weight: 700;
+}
+
+@keyframes rainbow {
+  0% { background-position: 0% center; }
+  100% { background-position: 300% center; }
+}
+
+/* ======= Lobby.tsx ======= */
+
+.lobby {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.lobby-content {
+  width: 100%;
+  max-width: 600px;
+  padding: 60px 40px 40px;
+  color: white;
+}
+
+.lobby-content hr {
+  border: none;
+  border-top: 2px solid white;
+  margin-bottom: 8px;
+}
+
+.lobby-row {
+  display: flex;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  animation: fadeSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.lobby-name {
+  width: 200px;
+}
+
+.lobby-count {
+  width: 60px;
+  font-weight: 700;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.lobby-join-btn {
+  margin-left: auto;
+  min-width: 100px;
+  text-align: center;
+}
+
+.lobby-join--full {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: white !important;
+  cursor: not-allowed !important;
+}
+
+/* ======= Game.tsx ======= */
+
+.game {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.game-content img {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 150%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  background-size: cover
+}
+
+.game-bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
+.game-hand {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: -10px;
+}
+
+.game-card {
+  width: 80px;
+  height: auto;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.game-card:hover {
+  transform: translateY(-16px);
+}
+
+/* ================================ АНІМАШКИ УРААААА ================================= */
+/* ======= Button animations ======= */
+
+.btn--solid {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease;
+}
+
+.btn--solid:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(159, 0, 245, 0.3);
+}
+
+.btn--solid:active {
+  transform: translateY(0px);
+  box-shadow: none;
+}
+
+.btn--underline {
+  transition: opacity 0.2s ease;
+}
+
+.btn--underline:hover {
+  opacity: 0.7;
+}
+
+/* ======= Page enter animations ======= */
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.home-content,
+.create-content,
+.settings-content,
+.how-content,
+.lobby-content,
+.login-content,
+.play-content {
+  animation: fadeSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* stagger how-cards */
+.how-card:nth-child(1) { animation: fadeSlideUp 0.5s 0.1s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.how-card:nth-child(2) { animation: fadeSlideUp 0.5s 0.2s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.how-card:nth-child(3) { animation: fadeSlideUp 0.5s 0.3s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.how-card:nth-child(4) { animation: fadeSlideUp 0.5s 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+/* stagger lobby rows */
+.lobby-row:nth-child(1) { animation: fadeSlideUp 0.5s 0.1s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.lobby-row:nth-child(2) { animation: fadeSlideUp 0.5s 0.2s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.lobby-row:nth-child(3) { animation: fadeSlideUp 0.5s 0.3s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.lobby-row:nth-child(4) { animation: fadeSlideUp 0.5s 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }

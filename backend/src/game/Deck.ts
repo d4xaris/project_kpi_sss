@@ -1,32 +1,22 @@
-export class Deck {}
-type CardColor = 'crimson' | 'yellow' | 'orange' | 'purple' | 'Wild'; //массив цветов
-type CardValue = |'0'| '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'Skip' | 'Reverse' | 'Draw+2' | 'black-change' | 'black+4-change';
+type CardColor = 'crimson' | 'yellow' | 'orange' | 'purple' | 'wild'; //массив цветов
+type CardValue = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'skip' | 'reverse' | 'drawtwo' | 'wild' | 'wild_draw4';
 //массив карт
-interface Card{
+export interface Card{
     color: CardColor;
     value: CardValue;
 }// интерфейс карт
-class Decka {
+export class Deck {
     private cards: Card[] = [];
 
     constructor() {
         const colors: CardColor[] = ['crimson', 'yellow', 'orange', 'purple'];
-        const Black = 'Black';
-        const values: CardValue[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Skip', 'Reverse', 'Draw+2'];
-        const zero = '0'; // нулей только 4
-        const blackChange = 'black-change';
-        const blackPlusFourChange = 'black+4-change';
+        const values: CardValue[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'reverse', 'drawtwo'];
+        const zero: CardValue = '0'; // нулей только 4
         for (let i = 0; i < 4; i++) {
-            this.cards.push( {
-                color: 'Wild',
-                value: 'black+4-change',
-            }); // генерация 4 черных карт первого вида
+            this.cards.push({ color: 'wild', value: 'wild_draw4' }); // генерация 4 черных карт первого вида
         }
         for (let i = 0; i < 4; i++) {
-            this.cards.push({
-                color: 'Wild',
-                value: 'black-change',
-            }); // генерация 4 черных карт второго вида
+            this.cards.push({ color: 'wild', value: 'wild' }); // генерация 4 черных карт второго вида
         }
         for (const color of colors) {
             this.cards.push({
@@ -39,7 +29,6 @@ class Decka {
                         color: color,
                         value: value,
                     }); // генерация всех ост карт
-
                 }
             }
         }
@@ -50,7 +39,6 @@ class Decka {
     shuffle (){
         for (let i = this.cards.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-
             const temp = this.cards[i] as Card;
             this.cards[i] = this.cards[j] as Card;
             this.cards[j] = temp;
@@ -64,10 +52,10 @@ class Decka {
         return this.cards.splice(0, actualCount);
     }
 }
-    // const myDeck = new Decka();
-    // myDeck.shuffle();
-    // const discard = myDeck.getCards().splice(0 ,100);
-    // const drawCards = myDeck.draw(5);
-    // console.table(discard);
-    // console.log(myDeck)
-    // console.log(drawCards);
+//const myDeck = new Deck();
+//myDeck.shuffle();
+// const discard = myDeck.getCards().splice(0, 100);
+// const drawCards = myDeck.draw(5);
+// console.table(discard);
+// console.log(myDeck);
+// console.log(drawCards);
