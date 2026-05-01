@@ -13,5 +13,11 @@ export class GameState {
             const hand = this.deck.splice(0, 7);
             this.playerHands.set(ids, hand);
         }
+        function* turn_generator(player: number[]) {
+            let currentIndex= 0;
+            while (true) {
+                yield player[currentIndex];
+            }
+        }
     };
 }
