@@ -14,4 +14,10 @@ export class GameState {
             this.playerHands.set(ids, hand);
         }
     };
+    *turn_generator(player: number[]) {
+    let currentIndex= 0;
+    while (true) {
+        yield player[currentIndex];
+    }
+    }
 }

@@ -1,5 +1,4 @@
 import type { FastifyInstance } from "fastify";
-import { request } from "node:http";
 
 const registrationSchema = {
   body: {
@@ -8,7 +7,7 @@ const registrationSchema = {
     properties: {
       login: { type: "string", minLength: 3, maxLength: 18 },
       nickname: { type: "string", minLength: 3, maxLength: 18 },
-      password: { type: "string", minLength: 3, maxLength: 18 },
+      password: { type: "string", minLength: 6, maxLength: 18 },
     },
   },
 };
@@ -33,92 +32,73 @@ export default async function authRoutes(app: FastifyInstance) {
       //can change the path of this route if need
       const { login, nickname, password } = request.body as any;
 
-      try {
-        const user = await app.prisma.User.create({
-          data: {
-            login: login,
-            nickname: nickname,
-            password: password,
-            totalWins: 0,
-          },
-        });
-
-        const token = app.jwt.sign({
-          id: user.id,
-          nickname: user.nickname,
-        });
-
-        return reply.status(201).send({
-          message: "User created",
-          token: token,
-          user: {
-            id: user.id,
-            nickname: user.nickname,
-          },
-        });
-      } catch (error: any) {
-        if (error.code === "P2002") {
-          return reply.status(400).send({ error: "Login already exist" });
-          //this error heppens when you send already existing login into DB
-        }
-
-        return reply.status(500).send({ error: "Server error" });
-        //this error heppens when you have server error, litteraly
-      }
-    },
-  );
-
-  // route for login
-  app.post("/auth/login", { schema: loginSchema }, async (request, reply) => {
-    const { login, password } = request.body as {
-      login: string;
-      password: string;
-    };
-
-    try {
-      const user = await app.prisma.User.findUnique({
-        where: { login: login },
+      const user = await app.prisma.User.create({
+        data: {
+          login: login,
+          nickname: nickname,
+          password: password,
+          totalWins: 0,
+        },
       });
-
-      if (!user) {
-        //if there is no such user
-        return reply.status(401).send({ error: "Incorrect login or password" });
-      }
-
-      if (user.password !== password) {
-        //if password is incorrect
-        return reply.status(401).send({ error: "Incorrect login or password" });
-      }
 
       const token = app.jwt.sign({
         id: user.id,
         nickname: user.nickname,
       });
 
-      return reply.status(200).send({
-        message: "success",
+      return reply.status(201).send({
+        success: true,
+        message: "User created",
         token: token,
         user: {
           id: user.id,
           nickname: user.nickname,
         },
       });
-    } catch (error) {
-      // for server errors
-      return reply.status(500).send({ error: "Server error" });
+    },
+  );
+
+  // route for login
+  app.post("/auth/login", { schema: loginSchema }, async (request, reply) => {
+    const { login, password } = request.body as any;
+
+    const user = await app.prisma.User.findUnique({
+      where: { login: login },
+    });
+
+    if (!user || user.password !== password) {
+      return reply.status(401).send({
+        success: false,
+        error: "Unauthorized",
+        message: "Incorrect login or password",
+      });
     }
+
+    const token = app.jwt.sign({
+      id: user.id,
+      nickname: user.nickname,
+    });
+
+    return reply.status(200).send({
+      success: true,
+      message: "Loged in",
+      token: token,
+      user: {
+        id: user.id,
+        nickname: user.nickname,
+      },
+    });
   });
 
   app.post(
+    // route doesn't log out the user, its just a signal for backend
     "/auth/logout",
     { preValidation: [(app as any).authenticate] },
     async (request, reply) => {
-      try {
-        return reply.status(200).send({ message: "Logged out succesfully" });
-      } catch (error) {
-        // for server errors
-        return reply.status(500).send({ error: "Server error" });
-      }
+      return reply.status(200).send({
+        success: true,
+        message: "Logged out succesfully",
+      });
     },
   );
 
@@ -127,7 +107,10 @@ export default async function authRoutes(app: FastifyInstance) {
     { preValidation: [(app as any).authenticate] },
     async (request, reply) => {
       const user = request.user;
-      return reply.send(user);
+      return reply.send({
+        success: true,
+        user: user,
+      });
     },
   );
 }
