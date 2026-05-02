@@ -33,6 +33,7 @@ export default fp(async (app: FastifyInstance) => {
       });
     }
 
+    // if user doesnt have rights to do this
     if (error.statusCode === 403) {
       return reply.status(403).send({
         success: false,

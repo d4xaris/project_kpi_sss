@@ -26,13 +26,13 @@ const loginSchema = {
 export default async function authRoutes(app: FastifyInstance) {
   // route for registration
   app.post(
-    "/auth/registration",
+    "/registration",
     { schema: registrationSchema },
     async (request, reply) => {
       //can change the path of this route if need
       const { login, nickname, password } = request.body as any;
 
-      const user = await app.prisma.User.create({
+      const user = await app.prisma.user.create({
         data: {
           login: login,
           nickname: nickname,
@@ -59,10 +59,10 @@ export default async function authRoutes(app: FastifyInstance) {
   );
 
   // route for login
-  app.post("/auth/login", { schema: loginSchema }, async (request, reply) => {
+  app.post("/login", { schema: loginSchema }, async (request, reply) => {
     const { login, password } = request.body as any;
 
-    const user = await app.prisma.User.findUnique({
+    const user = await app.prisma.user.findUnique({
       where: { login: login },
     });
 
@@ -92,7 +92,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
   app.post(
     // route doesn't log out the user, its just a signal for backend
-    "/auth/logout",
+    "/logout",
     { preValidation: [(app as any).authenticate] },
     async (request, reply) => {
       return reply.status(200).send({
@@ -103,7 +103,7 @@ export default async function authRoutes(app: FastifyInstance) {
   );
 
   app.get(
-    "/auth/me",
+    "/me",
     { preValidation: [(app as any).authenticate] },
     async (request, reply) => {
       const user = request.user;

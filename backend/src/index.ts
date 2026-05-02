@@ -3,14 +3,14 @@ import "dotenv/config";
 
 import gameRoutes from "./routes/game.js";
 import authRoutes from "./routes/auth.js";
-import authPlugin from "./plugins/jwt.js";
-import errorHandler from "./plugins/errorHandler.js";
+
 const app = Fastify({ logger: true });
 
-await app.register(authPlugin);
-await app.register(errorHandler);
-
+await app.register(import("./plugins/prisma.js"));
+await app.register(import("./plugins/jwt.js"));
 app.register(import("./plugins/cors.js"));
+await app.register(import("./plugins/errorHandler.js"));
+
 app.register(gameRoutes, { prefix: "/game" });
 app.register(authRoutes, { prefix: "/auth" });
 

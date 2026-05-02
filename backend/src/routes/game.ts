@@ -16,41 +16,37 @@ export default async function gameRoutes(app: FastifyInstance) {
   app.addHook("preValidation", (app as any).authenticate);
 
   // for creating the game
-  app.post(
-    "/game/create",
-    { schema: gameCreateSchema },
-    async (request, reply) => {
-      const user = request.user as {
-        id: number;
-        nickname: string;
-      };
+  app.post("/create", { schema: gameCreateSchema }, async (request, reply) => {
+    const user = request.user as {
+      id: number;
+      nickname: string;
+    };
 
-      const { sessionName, maxPlayers } = request.body as any;
+    const { sessionName, maxPlayers } = request.body as any;
 
-      const game = await app.prisma.GameSession.create({
-        data: {
-          sessionName: sessionName,
-          maxPlayers: maxPlayers,
-          hostId: user.id,
-          players: {
-            connect: { id: user.id },
-          },
+    const game = await app.prisma.gameSession.create({
+      data: {
+        sessionName: sessionName,
+        maxPlayers: maxPlayers,
+        hostId: user.id,
+        players: {
+          connect: { id: user.id },
         },
-      });
+      },
+    });
 
-      reply.status(201).send({
-        success: true,
-        message: "Game created",
-        game: game,
-      });
-    },
-  );
+    reply.status(201).send({
+      success: true,
+      message: "Game created",
+      game: game,
+    });
+  });
 
   // for seeing status of game
-  app.get("/game/:id/status", async (request, reply) => {
+  app.get("/:id/status", async (request, reply) => {
     const { id } = request.params as { id: string };
 
-    const game = await app.prisma.GameSession.findUniqueOrThrow({
+    const game = await app.prisma.gameSession.findUniqueOrThrow({
       where: { id: Number(id) },
       include: {
         players: true,
@@ -64,11 +60,11 @@ export default async function gameRoutes(app: FastifyInstance) {
   });
 
   // for start of the game
-  app.post("/game/:id/start", async (request, reply) => {
+  app.post("/:id/start", async (request, reply) => {
     const { id } = request.params as { id: string };
     const gameId = Number(id);
 
-    const game = await app.prisma.GameSession.findUniqueOrThrow({
+    const game = await app.prisma.gameSession.findUniqueOrThrow({
       where: { id: gameId },
       include: { players: true },
     });
@@ -88,7 +84,7 @@ export default async function gameRoutes(app: FastifyInstance) {
     // next line is the function of game settings which will be used in game(can't do it right now)
     // const gameSettings = room.function_of_settings_calculation()
 
-    await app.prisma.GameSession.update({
+    await app.prisma.gameSession.update({
       where: { id: gameId },
       data: { status: "PLAYING" },
     });
