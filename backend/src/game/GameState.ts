@@ -1,4 +1,4 @@
-import {type Card} from "./Deck.js";
+import {type Card} from "./shared.js";
 import {Deck} from "./Deck.js";
 
 
