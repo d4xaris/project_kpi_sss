@@ -96,4 +96,86 @@ export default async function gameRoutes(app: FastifyInstance) {
       //gameSettings: gameSettings
     });
   });
+
+  app.get("/sessions", async (request, reply) => {
+    const sessions = await app.prisma.gameSession.findMany({
+      where: {
+        status: "LOBBY",
+      },
+      include: {
+        _count: {
+          select: { players: true },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    const rooms = sessions.map((session) => ({
+      id: session.id,
+      sessionName: session.sessionName,
+      playerCount: session._count.players,
+      maxPlayers: session.maxPlayers,
+      hostId: session.hostId,
+    }));
+
+    return {
+      success: true,
+      rooms: rooms,
+    };
+  });
+
+  app.post("/:id/join", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const user = request.user as { id: number };
+    const userId = user.id;
+
+    const session = await app.prisma.gameSession.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        _count: {
+          select: {
+            players: true,
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      return reply.status(404).send({
+        success: false,
+        message: "Didn't found session",
+      });
+    }
+
+    if (session.status !== "LOBBY") {
+      return reply.status(400).send({
+        success: false,
+        message: "Game already started or ended",
+      });
+    }
+
+    if (session._count.players >= session.maxPlayers) {
+      return reply.status(400).send({
+        success: false,
+        message: "Session is full",
+      });
+    }
+
+    await app.prisma.gameSession.update({
+      where: { id: session.id },
+      data: {
+        players: {
+          connect: { id: userId },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      message: "You successfully joined the room",
+      sessionId: session.id,
+    };
+  });
 }
