@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import bcrypt from "bcrypt";
 
 const registrationSchema = {
   body: {
@@ -32,11 +33,13 @@ export default async function authRoutes(app: FastifyInstance) {
       //can change the path of this route if need
       const { login, nickname, password } = request.body as any;
 
+      const hashedPassword = await bcrypt.hash(password, 10);
+
       const user = await app.prisma.user.create({
         data: {
           login: login,
           nickname: nickname,
-          password: password,
+          password: hashedPassword,
           totalWins: 0,
         },
       });
@@ -66,7 +69,17 @@ export default async function authRoutes(app: FastifyInstance) {
       where: { login: login },
     });
 
-    if (!user || user.password !== password) {
+    if (!user) {
+      return reply.status(401).send({
+        success: false,
+        error: "Unauthorized",
+        message: "Incorrect login or password",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
       return reply.status(401).send({
         success: false,
         error: "Unauthorized",
