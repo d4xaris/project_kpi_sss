@@ -178,4 +178,46 @@ export default async function gameRoutes(app: FastifyInstance) {
       sessionId: session.id,
     };
   });
+
+  app.post("/:id/leave", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const user = request.user as { id: number };
+    const sessionId = parseInt(id);
+
+    const session = await app.prisma.gameSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      return reply.status(404).send({
+        success: false,
+        message: "Didn't found session",
+      });
+    }
+
+    if (session.hostId === user.id) {
+      await app.prisma.gameSession.delete({
+        where: { id: sessionId },
+      });
+
+      return {
+        success: true,
+        message: "Session is deleted",
+      };
+    } else {
+      await app.prisma.gameSession.update({
+        where: { id: sessionId },
+        data: {
+          players: {
+            disconnect: { id: user.id },
+          },
+        },
+      });
+
+      return {
+        success: true,
+        message: "You successfully left session",
+      };
+    }
+  });
 }
