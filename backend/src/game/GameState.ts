@@ -1,5 +1,5 @@
 import {type Card} from "./shared.js";
-import {Deck} from "./Deck.js";
+//import {Deck} from "./Deck.js";
 
 
 export class GameState {
@@ -49,4 +49,7 @@ export class GameState {
     //     yield player[currentIndex];
     // }
     // }
+     playCard(playerId: number,card: Card) {
+         
+     }
 }

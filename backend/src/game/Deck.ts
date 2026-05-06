@@ -1,4 +1,4 @@
-import { CardColor, CardValue } from './shared';
+import {type CardColor, type CardValue } from './shared.js';
 //массив карт
 interface Card{
     color: CardColor;

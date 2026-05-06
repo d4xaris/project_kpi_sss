@@ -4,3 +4,15 @@ export interface Card {
     color: CardColor;
     value: CardValue;
 }
+export type ActionResult =
+    | { success: true }
+    | { success: false, reason: 'NOT_YOUR_TURN' | 'INVALID_CARD' | 'CARD_NOT_IN_HAND' | 'GAME_OVER' };
+
+export class GameStateSnapshot {
+    topCards: Card[] = [];
+    myHand : Card[] = [];
+    currentPlayerId: number = 0;
+    //playerCardCount (type Record number)
+    direction= 1|-1;
+
+}
