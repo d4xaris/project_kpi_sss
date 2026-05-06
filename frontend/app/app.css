@@ -645,6 +645,55 @@ span {
   user-select: none;
 }
 
+.game-deck {
+  position: fixed;
+  top: 47%;
+  left: calc(50% - 220px);
+  transform: translateY(-50%);
+  pointer-events: none;
+  user-select: none;
+}
+
+.game-deck::before,
+.game-deck::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('/cards/back.svg') center / contain no-repeat;
+  border-radius: 8px;
+}
+
+.game-deck::before {
+  transform: rotate(-2deg) translate(-3px, 2px);
+  z-index: -2;
+  opacity: 0.9;
+}
+
+.game-deck::after {
+  transform: rotate(1.5deg) translate(3px, 1px);
+  z-index: -1;
+  opacity: 0.95;
+}
+
+.game-top-card {
+  position: fixed;
+  top: 47%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  user-select: none;
+  animation: cardInCenter 0.4s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+
+@keyframes cardInCenter {
+  from { opacity: 0; transform: translate(-50%, calc(-50% - 24px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
 .game-hand {
   position: fixed;
   bottom: 30px;
@@ -757,6 +806,109 @@ span {
 
 .game-card--dealing {
   animation: dealCard 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ======= Opponent hands ======= */
+
+.opponent-hand {
+  position: fixed;
+  display: flex;
+  flex-direction: row;
+  pointer-events: none;
+  user-select: none;
+}
+
+.opponent-card {
+  display: flex;
+}
+
+/* Top: drops straight down, no spin — clean and symmetrical */
+.opponent-hand--top .opponent-card {
+  animation: dealCardTop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes dealCardTop {
+  from { opacity: 0; transform: translateY(50px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Left: slides in with a counter-clockwise flip */
+.opponent-hand--left .opponent-card {
+  animation: dealCardLeft 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes dealCardLeft {
+  from { opacity: 0; transform: translateY(50px) rotate(-14deg); }
+  to   { opacity: 1; transform: translateY(0)    rotate(0deg); }
+}
+
+/* Right: slides in with a clockwise flip — mirror of left */
+.opponent-hand--right .opponent-card {
+  animation: dealCardRight 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes dealCardRight {
+  from { opacity: 0; transform: translateY(50px) rotate(14deg); }
+  to   { opacity: 1; transform: translateY(0)    rotate(0deg); }
+}
+
+/* Top opponent: horizontally centred, cards flipped 180° */
+.opponent-hand--top {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg);
+}
+
+/* Left opponent: rotate the whole row -90° so it fans vertically */
+.opponent-hand--left {
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+/* Right opponent: same but 90° */
+.opponent-hand--right {
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%) rotate(90deg);
+}
+
+/* ── Opponent name labels ── */
+.opponent-name {
+  position: fixed;
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1rem;
+  color: #fff;
+  background: #9f00f5;
+  padding: 5px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 210px;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* centered under the top hand */
+.opponent-name--top {
+  top: 175px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+/* left-aligned, starts after the left hand's visual right edge (~237px) */
+.opponent-name--left {
+  top: 50%;
+  left: 250px;
+  transform: translateY(-50%);
+  text-align: left;
+}
+
+/* right-aligned, ends before the right hand's visual left edge (~237px from right) */
+.opponent-name--right {
+  top: 50%;
+  right: 250px;
+  transform: translateY(-50%);
+  text-align: right;
 }
 
 /* ================================ АНІМАШКИ УРААААА ================================= */

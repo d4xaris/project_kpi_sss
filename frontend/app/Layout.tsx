@@ -2,6 +2,9 @@ import { Outlet, useLocation } from "react-router";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 
+const PLAYLIST_ID   = 'PLgmyWt4cSVPzWgohWEqsPr1yUAVLzU3VC';
+const GAME_VIDEO_ID = '3vrNJ88Aiww';
+
 function Stars() {
   const [stars, setStars] = useState<any[]>([]);
   const navigate = useNavigate();
@@ -10,140 +13,136 @@ function Stars() {
   useEffect(() => {
     setStars(Array.from({ length: 60 }, (_, i) => ({
       id: i,
-      top: `${Math.random() * 100}%`,
-      left: `${Math.random() * 100}%`,
-      size: `${Math.random() * 3 + 1.5}px`,
-      delay: `${Math.random() * 4}s`,
+      top:      `${Math.random() * 100}%`,
+      left:     `${Math.random() * 100}%`,
+      size:     `${Math.random() * 3 + 1.5}px`,
+      delay:    `${Math.random() * 4}s`,
       duration: `${Math.random() * 2 + 2}s`,
-      opacity: Math.random() * 0.5 + 0.2,
+      opacity:  Math.random() * 0.5 + 0.2,
     })));
   }, []);
 
   useEffect(() => {
-    const handleContextMenu = (e: MouseEvent) => {
+    const onContextMenu = (e: MouseEvent) => {
       if (location.pathname.startsWith("/game") || location.pathname.startsWith("/room")) return;
       e.preventDefault();
       navigate(-1);
     };
-
-    window.addEventListener("contextmenu", handleContextMenu);
-    return () => window.removeEventListener("contextmenu", handleContextMenu);
+    window.addEventListener("contextmenu", onContextMenu);
+    return () => window.removeEventListener("contextmenu", onContextMenu);
   }, [location.pathname]);
 
   return (
     <>
       {stars.map(s => (
         <div key={s.id} style={{
-          position: "fixed",
-          top: s.top,
-          left: s.left,
-          width: s.size,
-          height: s.size,
-          borderRadius: "50%",
-          background: "white",
-          opacity: s.opacity,
+          position: "fixed", top: s.top, left: s.left,
+          width: s.size, height: s.size, borderRadius: "50%",
+          background: "white", opacity: s.opacity,
           animation: `twinkle ${s.duration} ${s.delay} infinite ease-in-out`,
-          pointerEvents: "none",
-          zIndex: 0,
+          pointerEvents: "none", zIndex: 0,
         }} />
       ))}
     </>
   );
 }
 
-function SoundCloudPlayer() {
-  const iframeRef  = useRef<HTMLIFrameElement>(null);
-  const widgetRef  = useRef<any>(null);
-  const isReadyRef = useRef(false);
-  const location   = useLocation();
-  const isGame     = location.pathname.startsWith("/game");
-  const isGameRef  = useRef(isGame);
+function YouTubePlayer() {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const player    = useRef<any>(null);
+  const ready     = useRef(false);
+  const isGameRef = useRef(false);
+  const location  = useLocation();
+
+  const isGame = location.pathname.startsWith("/game");
   isGameRef.current = isGame;
 
-  const getVol = () => parseFloat(localStorage.getItem('musicVolume') ?? '0.5') * 100;
+  const vol = () => parseFloat(localStorage.getItem('musicVolume') ?? '0.3') * 100;
 
   useEffect(() => {
-    const bindWidget = () => {
-      const SC = (window as any).SC;
-      if (!SC || !iframeRef.current) return;
+    const init = () => {
+      const YT = (window as any).YT;
+      if (!YT?.Player || !iframeRef.current || player.current) return;
 
-      const widget = SC.Widget(iframeRef.current);
-      widgetRef.current = widget;
-
-      widget.bind(SC.Widget.Events.READY, () => {
-        isReadyRef.current = true;
-        widget.setVolume(getVol());
-        if (!isGameRef.current) widget.play();
+      player.current = new YT.Player(iframeRef.current, {
+        events: {
+          onReady: (e: any) => {
+            ready.current = true;
+            e.target.setVolume(0);    // start muted — browsers allow muted autoplay
+            e.target.setLoop(true);
+            e.target.playVideo();     // works because it's muted
+          },
+          onStateChange: (e: any) => {
+            if (e.data === (window as any).YT.PlayerState.ENDED && isGameRef.current) {
+              e.target.seekTo(0);
+              e.target.playVideo();
+            }
+          },
+        },
       });
     };
 
-    if ((window as any).SC) {
-      bindWidget();
-      return;
+    const prev = (window as any).onYouTubeIframeAPIReady;
+    (window as any).onYouTubeIframeAPIReady = () => { if (prev) prev(); init(); };
+
+    if ((window as any).YT?.Player) init();
+    else if (!document.getElementById('yt-api')) {
+      const s = document.createElement('script');
+      s.id = 'yt-api'; s.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(s);
     }
-
-    if (document.getElementById('sc-widget-api')) return;
-
-    const script = document.createElement('script');
-    script.id    = 'sc-widget-api';
-    script.src   = 'https://w.soundcloud.com/player/api.js';
-    script.onload = bindWidget;
-    document.head.appendChild(script);
   }, []);
 
+  // First click: unmute at the user's chosen volume
   useEffect(() => {
-    const start = () => {
-      if (isReadyRef.current && !isGameRef.current) {
-        widgetRef.current?.setVolume(getVol());
-        widgetRef.current?.play();
-      }
+    const unmute = () => {
+      if (!ready.current) return;
+      player.current.unMute();
+      player.current.setVolume(vol());
     };
-    document.addEventListener('click', start, { once: true });
-    return () => document.removeEventListener('click', start);
+    document.addEventListener('click', unmute, { once: true });
+    return () => document.removeEventListener('click', unmute);
   }, []);
 
+  // Route changes: game song on /game, playlist everywhere else
   useEffect(() => {
-    const handler = (e: Event) => {
-      widgetRef.current?.setVolume((e as CustomEvent<number>).detail * 100);
-    };
-    window.addEventListener('sss:musicVolume', handler);
-    return () => window.removeEventListener('sss:musicVolume', handler);
-  }, []);
-
-  // Pause on /game, resume everywhere else
-  useEffect(() => {
-    if (!widgetRef.current || !isReadyRef.current) return;
+    if (!ready.current) return;
     if (isGame) {
-      widgetRef.current.pause();
+      player.current.unMute();
+      player.current.setVolume(vol());
+      player.current.loadVideoById(GAME_VIDEO_ID);
     } else {
-      widgetRef.current.setVolume(getVol());
-      widgetRef.current.play();
+      player.current.loadPlaylist({ listType: 'playlist', list: PLAYLIST_ID });
+      player.current.setLoop(true);
+      player.current.playVideo();
     }
   }, [isGame]);
 
+  // Volume slider in Settings
+  useEffect(() => {
+    const onVol = (e: Event) => player.current?.setVolume((e as CustomEvent).detail * 100);
+    window.addEventListener('sss:musicVolume', onVol);
+    return () => window.removeEventListener('sss:musicVolume', onVol);
+  }, []);
+
+  const src = `https://www.youtube.com/embed/videoseries?list=${PLAYLIST_ID}&enablejsapi=1&autoplay=1&mute=1&controls=0&loop=1&rel=0&playsinline=1&origin=${window.location.origin}`;
+
   return (
-    <iframe
-      ref={iframeRef}
-      id="sc-player"
-      src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/indexforpara/c418-alpha&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false&visual=false"
-      style={{
-        position: 'fixed',
-        bottom: '-200px',
-        left:   '-200px',
-        width:  '1px',
-        height: '1px',
-        opacity: 0,
-        pointerEvents: 'none',
-      }}
-      allow="autoplay"
-    />
+    <div style={{ position: 'fixed', bottom: -300, left: -300, opacity: 0, pointerEvents: 'none' }}>
+      <iframe
+        ref={iframeRef}
+        src={src}
+        allow="autoplay"
+        style={{ width: 1, height: 1, border: 'none' }}
+      />
+    </div>
   );
 }
 
 export default function Layout() {
   const location = useLocation();
   const angleRef = useRef(90);
-  const noStars  = location.pathname.startsWith("/game") || location.pathname.startsWith("/room");
+  const noStars  = location.pathname.startsWith("/game");
 
   useEffect(() => {
     angleRef.current += 45;
@@ -153,7 +152,7 @@ export default function Layout() {
   return (
     <>
       {!noStars && <Stars />}
-      <SoundCloudPlayer />
+      <YouTubePlayer />
       <Outlet />
     </>
   );

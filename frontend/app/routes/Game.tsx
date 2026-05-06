@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router';
-import { MOCK_HAND } from '~/mockData';
+import { MOCK_HAND, MOCK_TOP_CARD, MOCK_OPPONENTS } from '~/mockData';
 import SSSCard from '~/components/SSSCard';
 import { sounds } from '~/sounds';
 
@@ -13,7 +13,8 @@ type Phase = 'closing' | 'closed' | 'opening' | 'done';
 
 
 export default function Game() {
-  const hand     = MOCK_HAND;
+  const hand    = MOCK_HAND;
+  const topCard = MOCK_TOP_CARD;
   const location = useLocation();
   const fromRoom = (location.state as any)?.fromRoom === true;
 
@@ -62,6 +63,56 @@ export default function Game() {
       )}
 
       {phase === 'done' && (
+        <>
+          <div className="game-deck">
+            <SSSCard id="back" height={110} />
+          </div>
+          <div className="game-top-card">
+            <SSSCard id={cardId(topCard)} height={110} />
+          </div>
+        </>
+      )}
+
+      {phase === 'done' && (
+        <>
+          <div className="opponent-name opponent-name--top">{MOCK_OPPONENTS.top}</div>
+          <div className="opponent-name opponent-name--left">{MOCK_OPPONENTS.left}</div>
+          <div className="opponent-name opponent-name--right">{MOCK_OPPONENTS.right}</div>
+        </>
+      )}
+
+      {phase === 'done' && (
+        <>
+          {/* Top opponent — 180° */}
+          <div className="opponent-hand opponent-hand--top">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="opponent-card" style={{ marginLeft: i === 0 ? 0 : -30, animationDelay: `${i * 90}ms` }}>
+                <SSSCard id="back" height={110} />
+              </div>
+            ))}
+          </div>
+
+          {/* Left opponent — -90° */}
+          <div className="opponent-hand opponent-hand--left">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="opponent-card" style={{ marginLeft: i === 0 ? 0 : -30, animationDelay: `${i * 90}ms` }}>
+                <SSSCard id="back" height={110} />
+              </div>
+            ))}
+          </div>
+
+          {/* Right opponent — 90° */}
+          <div className="opponent-hand opponent-hand--right">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="opponent-card" style={{ marginLeft: i === 0 ? 0 : -30, animationDelay: `${i * 90}ms` }}>
+                <SSSCard id="back" height={110} />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {phase === 'done' && (
         <div
           className="game-hand"
           onMouseEnter={() => setHandHovered(true)}
@@ -86,7 +137,7 @@ export default function Game() {
                 onMouseLeave={() => setHoveredIndex(null)}
                 onAnimationEnd={() => onDealEnd(i)}
               >
-                <SSSCard id={cardId(card)} height={130} />
+                <SSSCard id={cardId(card)} height={110} />
               </div>
             );
           })}

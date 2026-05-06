@@ -1,9 +1,18 @@
 import { useNavigate } from "react-router";
 import Button from "~/components/Button";
-import { MOCK_ROOMS } from "~/mockData";
+import { useLobby } from "~/hooks/useLobby";
+import type { RoomSummary } from "~/hooks/useLobby";
 
 export default function Lobby() {
   const navigate = useNavigate();
+  const { rooms, loading, refresh, joinRoom } = useLobby();
+
+  const handleJoin = async (room: RoomSummary) => {
+    const ok = await joinRoom(room.id);
+    if (ok) navigate(`/room/${room.id}`, {
+      state: { roomName: room.sessionName, hostId: room.hostId, maxPlayers: room.maxPlayers },
+    });
+  };
 
   return (
     <div className="lobby">
@@ -11,16 +20,20 @@ export default function Lobby() {
         <h1>Join a room</h1>
         <hr />
 
-        {MOCK_ROOMS.map((room, i) => {
-          const full = room.players >= room.maxPlayers;
+        {loading ? (
+          <p style={{ textAlign: "center", opacity: 0.6 }}>Loading rooms...</p>
+        ) : rooms.length === 0 ? (
+          <p style={{ textAlign: "center", opacity: 0.6 }}>No rooms available</p>
+        ) : rooms.map((room, i) => {
+          const full = room.playerCount >= room.maxPlayers;
           return (
             <div className="lobby-row" key={room.id} style={{ animationDelay: `${i * 0.1}s` }}>
-              <span className="lobby-name">{room.name}</span>
-              <span className="lobby-count">{room.players}/{room.maxPlayers}</span>
+              <span className="lobby-name">{room.sessionName}</span>
+              <span className="lobby-count">{room.playerCount}/{room.maxPlayers}</span>
               <button
                 className={`btn--solid lobby-join-btn ${full ? "lobby-join--full" : ""}`}
                 disabled={full}
-                onClick={() => navigate(`/room/${room.id}`)}
+                onClick={() => handleJoin(room)}
               >
                 {full ? "Full" : "Join"}
               </button>
@@ -30,6 +43,7 @@ export default function Lobby() {
 
         <div className="create-actions">
           <Button text="Go back" variant="underline" onClick={() => navigate("/play")} />
+          <Button text="Refresh" variant="underline" onClick={refresh} />
         </div>
       </div>
     </div>
