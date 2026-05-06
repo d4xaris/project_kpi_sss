@@ -119,7 +119,23 @@ export default async function authRoutes(app: FastifyInstance) {
     "/me",
     { preValidation: [(app as any).authenticate] },
     async (request, reply) => {
-      const user = request.user;
+      const { id } = request.user as { id: number };
+      const user = await app.prisma.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          nickname: true,
+          totalWins: true,
+          gamesPlayed: true,
+        },
+      });
+
+      if (!user) {
+        return reply.status(404).send({
+          success: false,
+          message: "User not found",
+        });
+      }
       return reply.send({
         success: true,
         user: user,

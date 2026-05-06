@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { GameRoom } from "../game/GameRoom.js";
+import { Session } from "node:inspector";
 
 const gameCreateSchema = {
   body: {
@@ -66,8 +67,22 @@ export default async function gameRoutes(app: FastifyInstance) {
 
     const game = await app.prisma.gameSession.findUniqueOrThrow({
       where: { id: gameId },
-      include: { players: true },
+      include: {
+        players: true,
+        _count: {
+          select: {
+            players: true,
+          },
+        },
+      },
     });
+
+    if (!game) {
+      return reply.status(404).send({
+        success: false,
+        message: "Game not found",
+      });
+    }
 
     const user = request.user as { id: number };
     if (game.hostId !== user.id) {
@@ -78,7 +93,14 @@ export default async function gameRoutes(app: FastifyInstance) {
       });
     }
 
-    const players = game.players.map((p: any) => p.id);
+    if (game._count.players < 2) {
+      return reply.status(400).send({
+        success: false,
+        message: "Not enough players",
+      });
+    }
+
+    const players = game.players.map((p) => p.id);
 
     const room = new GameRoom(players);
     // next line is the function of game settings which will be used in game(can't do it right now)
@@ -163,6 +185,25 @@ export default async function gameRoutes(app: FastifyInstance) {
       });
     }
 
+    const activeSession = await app.prisma.gameSession.findFirst({
+      where: {
+        players: {
+          some: { id: userId },
+        },
+        status: {
+          in: ["LOBBY", "PLAYING"],
+        },
+      },
+    });
+
+    if (activeSession) {
+      return reply.status(400).send({
+        success: false,
+        message: "You are already in another session",
+        activeSessionId: activeSession.id,
+      });
+    }
+
     await app.prisma.gameSession.update({
       where: { id: session.id },
       data: {
@@ -219,5 +260,72 @@ export default async function gameRoutes(app: FastifyInstance) {
         message: "You successfully left session",
       };
     }
+  });
+
+  app.post("/:id/finish", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { winnerId } = request.body as { winnerId: number };
+    const sessionId = parseInt(id);
+
+    const session = await app.prisma.gameSession.findUnique({
+      where: { id: sessionId },
+      include: { players: true },
+    });
+
+    if (!session) {
+      return reply.status(404).send({
+        success: false,
+        message: "Game not found",
+      });
+    }
+
+    if (session.status !== "PLAYING") {
+      return reply.status(400).send({
+        success: false,
+        message: "Game not finnished",
+      });
+    }
+
+    const playersIds = session.players.map((p) => p.id);
+
+    await app.prisma.$transaction([
+      app.prisma.user.updateMany({
+        where: {
+          id: {
+            in: playersIds,
+          },
+        },
+        data: {
+          gamesPlayed: {
+            increment: 1,
+          },
+        },
+      }),
+
+      app.prisma.user.update({
+        where: {
+          id: winnerId,
+        },
+        data: {
+          totalWins: {
+            increment: 1,
+          },
+        },
+      }),
+
+      app.prisma.gameSession.update({
+        where: {
+          id: sessionId,
+        },
+        data: {
+          status: "ENDED",
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+      message: "Game finished, everything updated",
+    };
   });
 }

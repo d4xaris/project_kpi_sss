@@ -18,18 +18,25 @@ model User {
   login        String         @unique
   nickname     String
   totalWins    Int            @default(0)
+  gamesPlayed  Int            @default(0)
   password     String         
   session      GameSession[]  //this will connect players to sessions, i guess
   hostedGames  GameSession[]  @relation("GameHost")
 }
 
+enum GameStatus {
+  LOBBY
+  PLAYING
+  ENDED
+}
+
 model GameSession {
-  id           Int       @id @default(autoincrement())
+  id           Int         @id @default(autoincrement())
   sessionName  String
-  status       String    @default("LOBBY") //all options: "LOBBY" "PLAYING" "ENDED"
-  createdAt    DateTime  @default(now())
-  maxPlayers   Int       //@default(4)
-  players      User[]    //players ids will save here and it will show all the players when we will open the statistic
+  status       GameStatus  @default(LOBBY) //all options: "LOBBY" "PLAYING" "ENDED"
+  createdAt    DateTime    @default(now())
+  maxPlayers   Int         //@default(4)
+  players      User[]      //players ids will save here and it will show all the players when we will open the statistic
   hostId       Int
-  host         User      @relation("GameHost", fields: [hostId], references: [id]) //this shi must give the id of host player, so he can change setting of game
+  host         User        @relation("GameHost", fields: [hostId], references: [id]) //this shi must give the id of host player, so he can change setting of game
 }
