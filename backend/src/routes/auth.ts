@@ -40,7 +40,6 @@ export default async function authRoutes(app: FastifyInstance) {
           login: login,
           nickname: nickname,
           password: hashedPassword,
-          totalWins: 0,
         },
       });
 
