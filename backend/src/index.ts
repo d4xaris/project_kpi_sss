@@ -31,6 +31,7 @@ const app = Fastify({
 await app.register(import("./plugins/prisma.js"));
 await app.register(import("./plugins/jwt.js"));
 await app.register(import("./plugins/cors.js"));
+await app.register(import("./plugins/socket.js"));
 await app.register(import("./plugins/errorHandler.js"));
 await app.register(import("@fastify/rate-limit"));
 
