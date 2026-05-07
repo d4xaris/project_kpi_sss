@@ -6,7 +6,7 @@ export interface Card {
 }
 export type ActionResult =
     | { success: true }
-    | { success: false, reason: 'NOT_YOUR_TURN' | 'INVALID_CARD' | 'CARD_NOT_IN_HAND' | 'GAME_OVER' };
+    | { success: false, reason: 'NOT_YOUR_TURN' | 'INVALID_CARD' | 'CARD_NOT_IN_HAND' | 'GAME_OVER'|'PLAYER_NOT_FOUND' };
 
 export class GameStateSnapshot {
     topCards: Card[] = [];
