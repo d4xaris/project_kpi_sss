@@ -1,4 +1,5 @@
-import {type Card} from "./shared.js";
+import {type ActionResult, type Card} from "./shared.js";
+import {canPlayCards} from "./rules.js";
 //import {Deck} from "./Deck.js";
 
 
@@ -49,7 +50,18 @@ export class GameState {
     //     yield player[currentIndex];
     // }
     // }
-     playCard(playerId: number,card: Card) {
+     public playCard(playerIds: number,card: Card):ActionResult {
+        if (playerIds !== this.currentPlayerIndex) {
+            return { success: false, reason: 'NOT_YOUR_TURN' };
+        }
+        let hand = this.playerHands.get(playerIds);
+         if (!hand) {
+                return { success: false, reason: 'PLAYER_NOT_FOUND' };
+         }
+         return {success: true };
+         if (!canPlayCards(card, this.topCard)) {
+             return { success: false, reason: 'INVALID_CARD' };
+         }
          
      }
 }
