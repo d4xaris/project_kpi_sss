@@ -5,10 +5,8 @@ import { useAuth } from "~/hooks/useAuth";
 import { useGame } from "~/hooks/useGame";
 import { sounds } from "~/sounds";
 
-interface Player {
-  id: number;
-  nickname: string;
-}
+interface Player        { id: number; nickname: string }
+interface LocationState { roomName?: string; hostId?: number; maxPlayers?: number }
 
 const Crown = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -17,36 +15,39 @@ const Crown = () => (
 );
 
 export default function Room() {
-  const navigate                   = useNavigate();
-  const { id }                     = useParams();
-  const { state }                  = useLocation();
-  const { user }                   = useAuth();
-  const { startGame, leaveRoom }   = useGame();
+  const navigate                 = useNavigate();
+  const { id }                   = useParams();
+  const { state }                = useLocation();
+  const { user }                 = useAuth();
+  const { startGame, leaveRoom } = useGame();
 
-  const roomName = (state as any)?.roomName ?? "Room";
-  const hostId   = (state as any)?.hostId   ?? user?.id;
-  const isHost   = user?.id === hostId;
+  const { roomName = "Room", hostId = user?.id } = (state as LocationState) ?? {};
+  const isHost = user?.id === hostId;
 
-  // TODO: WebSocket will replace this with the real player list via 'room:state'
   const [players, setPlayers] = useState<Player[]>([]);
   const [closing, setClosing] = useState(false);
 
   const canStart = players.length >= 2;
 
+  // Seed the local player on mount
   useEffect(() => {
     if (user) setPlayers([{ id: user.id, nickname: user.nickname }]);
   }, [user]);
 
+  // HONIKE: replace this entire effect with a socket connection + event listeners.
+  //
+  //   const socket = connectToRoom(id, token);   ← token from localStorage.getItem('token')
+  //
+  //   socket.on('room:state',   ({ players })  => setPlayers(players));
+  //   socket.on('player:join',  (player)       => setPlayers(prev => [...prev, player]));
+  //   socket.on('player:leave', ({ playerId }) => setPlayers(prev => prev.filter(p => p.id !== playerId)));
+  //   socket.on('game:start',   ()             => navigate('/game', { state: { fromRoom: true } }));
+  //   socket.on('room:closed',  ()             => navigate('/lobby'));
+  //
+  //   return () => socket.disconnect();
+  //
+  // MOCK: localStorage signals (remove when sockets are wired)
   useEffect(() => {
-    // TODO: WebSocket setup
-    // const socket = connectToRoom(id, token);
-    // socket.on('room:state',   ({ players }) => setPlayers(players));
-    // socket.on('player:join',  (player)     => setPlayers(prev => [...prev, player]));
-    // socket.on('player:leave', (playerId)   => setPlayers(prev => prev.filter(p => p.id !== playerId)));
-    // socket.on('game:start',   ()           => navigate('/game', { state: { fromRoom: true } }));
-    // socket.on('room:closed',  ()           => navigate('/lobby'));
-    // return () => socket.disconnect();
-
     if (isHost) return;
     const onStorage = (e: StorageEvent) => {
       if (e.key === `sss:start:${id}` && e.newValue === "1")
@@ -59,14 +60,15 @@ export default function Room() {
   }, [id, isHost]);
 
   const handleLeave = async () => {
-    // TODO: replace with socket.emit('room:leave', { roomId: id })
+    // HONIKE: socket.emit('room:leave', { roomId: id }), then disconnect socket
     await leaveRoom(Number(id), isHost);
     navigate("/lobby");
   };
 
   const handleStart = async () => {
     sounds.gameStart();
-    // TODO: replace with socket.emit('game:start', { roomId: id })
+    // HONIKE: socket.emit('game:start', { roomId: id })
+    //         server validates sender is host, then broadcasts 'game:start' to all players in room
     const ok = await startGame(Number(id));
     if (!ok) return;
     setClosing(true);

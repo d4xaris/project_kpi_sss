@@ -686,7 +686,10 @@ span {
   pointer-events: none;
   user-select: none;
   animation: cardInCenter 0.4s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+  border-radius: 10px;
+  transition: box-shadow 0.4s ease;
 }
+
 
 
 @keyframes cardInCenter {
@@ -704,10 +707,16 @@ span {
   user-select: none;
 }
 
-.game-card {
+/* Static hit zone — never transforms, so hover never flickers */
+.game-card-hit {
+  position: relative;
+  display: flex;
   cursor: pointer;
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-              margin-left 0.3s ease;
+  transition: margin-left 0.3s ease;
+}
+
+.game-card {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   user-select: none;
   -webkit-user-drag: none;
 }
@@ -909,6 +918,220 @@ span {
   right: 250px;
   transform: translateY(-50%);
   text-align: right;
+}
+
+/* ── Wild card colour picker ── */
+
+.color-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.75) 100%);
+  animation: fadeIn 0.2s ease both;
+}
+
+/* Title floats above the circle, doesn't affect its centering */
+.color-picker__title {
+  position: absolute;
+  top: calc(50% - 110px - 54px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1.1rem;
+  color: #fff;
+  background: #9f00f5;
+  padding: 8px 22px;
+  border-radius: 20px;
+  margin: 0;
+  letter-spacing: 0.06em;
+  animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.color-picker-backdrop--closing {
+  animation: fadeOut 0.25s ease both;
+  pointer-events: none;
+}
+
+/* Single circle, 220×220, split into 4 wedge buttons */
+.color-picker {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  filter: drop-shadow(0 8px 32px rgba(0,0,0,0.5));
+}
+
+.color-picker__btn {
+  position: absolute;
+  inset: 0;
+  background: var(--clr);
+  border: none;
+  cursor: pointer;
+  /* Only animate opacity so transform stays free for hover */
+  animation: popIn 0.3s ease both;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              filter 0.2s ease;
+}
+
+.color-picker__btn:hover {
+  filter: brightness(1.2);
+}
+
+/* SVG arc: M center L edge-point A radius 0 0 1 next-edge-point Z */
+.color-picker__btn--tl { clip-path: path('M 110 110 L 0 110   A 110 110 0 0 1 110 0   Z'); }
+.color-picker__btn--tr { clip-path: path('M 110 110 L 110 0   A 110 110 0 0 1 220 110  Z'); }
+.color-picker__btn--br { clip-path: path('M 110 110 L 220 110  A 110 110 0 0 1 110 220  Z'); }
+.color-picker__btn--bl { clip-path: path('M 110 110 L 110 220  A 110 110 0 0 1 0 110   Z'); }
+
+/* Each wedge pushes away from the centre on hover */
+.color-picker__btn--tl:hover { transform: translate(-10px, -10px); }
+.color-picker__btn--tr:hover { transform: translate( 10px, -10px); }
+.color-picker__btn--br:hover { transform: translate( 10px,  10px); }
+.color-picker__btn--bl:hover { transform: translate(-10px,  10px); }
+
+/* Staggered pop-in */
+.color-picker__btn:nth-child(1) { animation-delay:   0ms; }
+.color-picker__btn:nth-child(2) { animation-delay:  70ms; }
+.color-picker__btn:nth-child(3) { animation-delay: 140ms; }
+.color-picker__btn:nth-child(4) { animation-delay: 210ms; }
+
+@keyframes popIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── SOLO screen effects ── */
+.solo-effects {
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  pointer-events: none;
+}
+
+/* Brief bright flash at the centre */
+.solo-flash {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(159,0,245,0.4) 50%, transparent 75%);
+  animation: soloFlash 0.6s ease-out both;
+}
+
+@keyframes soloFlash {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(0.2); }
+  40%  { opacity: 0.9; transform: translate(-50%, -50%) scale(2.5); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(3); }
+}
+
+/* Sparkle particles that fly outward */
+.solo-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 2px;
+  background: var(--clr);
+  animation: soloParticle 1.8s cubic-bezier(0.2, 0.8, 0.4, 1) both;
+  animation-delay: var(--delay);
+}
+
+@keyframes soloParticle {
+  0%   {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0);
+  }
+  70%  { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(-1 * var(--dist)));
+  }
+}
+
+/* ── SOLO splash ── */
+.solo-splash {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  pointer-events: none;
+  z-index: 200;
+  animation: soloSplash 1.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes soloSplash {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  20%  { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  35%  { transform: translate(-50%, -50%) scale(1); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ── SOLO button ── */
+.solo-btn {
+  position: fixed;
+  bottom: 36px;
+  right: 36px;
+  z-index: 100;
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1.4rem;
+  color: #fff;
+  background: #9f00f5;
+  border: none;
+  border-radius: 20px;
+  padding: 12px 28px;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  box-shadow: 0 4px 20px rgba(159, 0, 245, 0.5);
+  animation: soloAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+             soloPulse 1.2s ease-in-out infinite;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.solo-btn:hover {
+  background: #b400ff;
+  transform: scale(1.07);
+}
+
+.solo-btn--called {
+  background: #444;
+  box-shadow: none;
+  animation: soloAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  cursor: default;
+  opacity: 0.6;
+}
+
+.solo-btn--called:hover {
+  background: #444;
+  transform: none;
+}
+
+@keyframes soloAppear {
+  from { opacity: 0; transform: scale(0.5) translateY(20px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0);    }
+}
+
+@keyframes soloPulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(159, 0, 245, 0.5); }
+  50%       { box-shadow: 0 4px 30px rgba(159, 0, 245, 0.85); }
 }
 
 /* ================================ АНІМАШКИ УРААААА ================================= */

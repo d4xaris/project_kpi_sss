@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 
 const PLAYLIST_ID   = 'PLgmyWt4cSVPzWgohWEqsPr1yUAVLzU3VC';
-const GAME_VIDEO_ID = '3vrNJ88Aiww';
+const GAME_VIDEO_ID = 'oUI_tVU77cw';
 
 function Stars() {
   const [stars, setStars] = useState<any[]>([]);
@@ -57,7 +57,10 @@ function YouTubePlayer() {
   const isGame = location.pathname.startsWith("/game");
   isGameRef.current = isGame;
 
+  const hasClicked = useRef(false);
   const vol = () => parseFloat(localStorage.getItem('musicVolume') ?? '0.3') * 100;
+
+  const unmute = (p: any) => { p.unMute(); p.setVolume(vol()); };
 
   useEffect(() => {
     const init = () => {
@@ -68,9 +71,15 @@ function YouTubePlayer() {
         events: {
           onReady: (e: any) => {
             ready.current = true;
-            e.target.setVolume(0);    // start muted — browsers allow muted autoplay
-            e.target.setLoop(true);
-            e.target.playVideo();     // works because it's muted
+            if (isGameRef.current) {
+              e.target.loadVideoById(GAME_VIDEO_ID);
+            } else {
+              e.target.setVolume(0);
+              e.target.setLoop(true);
+              e.target.playVideo();
+            }
+            // If user already clicked before player was ready, unmute now
+            if (hasClicked.current) unmute(e.target);
           },
           onStateChange: (e: any) => {
             if (e.data === (window as any).YT.PlayerState.ENDED && isGameRef.current) {
@@ -93,15 +102,14 @@ function YouTubePlayer() {
     }
   }, []);
 
-  // First click: unmute at the user's chosen volume
+  // First click: unmute. If player not ready yet, flag it so onReady handles it.
   useEffect(() => {
-    const unmute = () => {
-      if (!ready.current) return;
-      player.current.unMute();
-      player.current.setVolume(vol());
+    const onClick = () => {
+      hasClicked.current = true;
+      if (ready.current) unmute(player.current);
     };
-    document.addEventListener('click', unmute, { once: true });
-    return () => document.removeEventListener('click', unmute);
+    document.addEventListener('click', onClick, { once: true });
+    return () => document.removeEventListener('click', onClick);
   }, []);
 
   // Route changes: game song on /game, playlist everywhere else
@@ -138,6 +146,7 @@ function YouTubePlayer() {
     </div>
   );
 }
+
 
 export default function Layout() {
   const location = useLocation();
