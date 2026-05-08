@@ -19,13 +19,7 @@ export default fp(async (app: FastifyInstance) => {
   app.decorate(
     "authenticate",
     async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        await request.jwtVerify();
-      } catch (err) {
-        reply
-          .status(401)
-          .send({ error: "You are not loged in or session is expired" });
-      }
+      await request.jwtVerify();
     },
   );
 });

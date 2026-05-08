@@ -645,28 +645,496 @@ span {
   user-select: none;
 }
 
+.game-deck {
+  position: fixed;
+  top: 47%;
+  left: calc(50% - 220px);
+  transform: translateY(-50%);
+  pointer-events: none;
+  user-select: none;
+}
+
+.game-deck::before,
+.game-deck::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('/cards/back.svg') center / contain no-repeat;
+  border-radius: 8px;
+}
+
+.game-deck::before {
+  transform: rotate(-2deg) translate(-3px, 2px);
+  z-index: -2;
+  opacity: 0.9;
+}
+
+.game-deck::after {
+  transform: rotate(1.5deg) translate(3px, 1px);
+  z-index: -1;
+  opacity: 0.95;
+}
+
+.game-top-card {
+  position: fixed;
+  top: 47%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  user-select: none;
+  animation: cardInCenter 0.4s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+  border-radius: 10px;
+  transition: box-shadow 0.4s ease;
+}
+
+
+
+@keyframes cardInCenter {
+  from { opacity: 0; transform: translate(-50%, calc(-50% - 24px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
 .game-hand {
   position: fixed;
-  bottom: 20px;
+  bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: -10px;
+  align-items: flex-end;
+  user-select: none;
+}
+
+/* Static hit zone — never transforms, so hover never flickers */
+.game-card-hit {
+  position: relative;
+  display: flex;
+  cursor: pointer;
+  transition: margin-left 0.3s ease;
 }
 
 .game-card {
-  width: 80px;
-  height: auto;
-  cursor: pointer;
-  transition: transform 0.15s;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-.game-card:hover {
-  transform: translateY(-16px);
+.game-card img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.game-card--hovered {
+  transform: translateY(-28px);
+  user-select: none;
+}
+
+/* ── Curtain intro ── */
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.curtain__left,
+.curtain__right {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  transition: transform 0.65s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.curtain__left {
+  left: 0;
+  background: linear-gradient(90deg, #9f00f5, #b87aff);
+  transform: translateX(-100%);
+}
+
+.curtain__right {
+  right: 0;
+  background: linear-gradient(90deg, #b87aff, #9ba5ff);
+  transform: translateX(100%);
+}
+
+.curtain__left--closing,
+.curtain__left--closed   { transform: translateX(0); }
+
+.curtain__right--closing,
+.curtain__right--closed  { transform: translateX(0); }
+
+.curtain__left--opening  { transform: translateX(-100%); }
+.curtain__right--opening { transform: translateX(100%); }
+
+/* ── Logo ── */
+.curtain__logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 480px;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  z-index: 1002;
+  pointer-events: none;
+  user-select: none;
+}
+
+.curtain__logo--visible {
+  animation:
+    logoAppear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+    logoFloat  3s ease-in-out 0.5s infinite;
+}
+
+.curtain__logo--hiding {
+  animation: logoHide 0.45s ease-in forwards;
+}
+
+@keyframes logoAppear {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.8);            }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateY(0);}
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0);     }
+  50%       { transform: translate(-50%, -50%) translateY(-12px); }
+}
+
+@keyframes logoHide {
+  from { opacity: 1; transform: translate(-50%, -50%) translateY(0);    }
+  to   { opacity: 0; transform: translate(-50%, -50%) translateY(20px); }
+}
+
+/* ── Card deal-in animation ── */
+@keyframes dealCard {
+  from { opacity: 0; transform: translateY(50px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.game-card--dealing {
+  animation: dealCard 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ======= Opponent hands ======= */
+
+.opponent-hand {
+  position: fixed;
+  display: flex;
+  flex-direction: row;
+  pointer-events: none;
+  user-select: none;
+}
+
+.opponent-card {
+  display: flex;
+}
+
+/* Top: drops straight down, no spin — clean and symmetrical */
+.opponent-hand--top .opponent-card {
+  animation: dealCardTop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes dealCardTop {
+  from { opacity: 0; transform: translateY(50px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Left: slides in with a counter-clockwise flip */
+.opponent-hand--left .opponent-card {
+  animation: dealCardLeft 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes dealCardLeft {
+  from { opacity: 0; transform: translateY(50px) rotate(-14deg); }
+  to   { opacity: 1; transform: translateY(0)    rotate(0deg); }
+}
+
+/* Right: slides in with a clockwise flip — mirror of left */
+.opponent-hand--right .opponent-card {
+  animation: dealCardRight 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes dealCardRight {
+  from { opacity: 0; transform: translateY(50px) rotate(14deg); }
+  to   { opacity: 1; transform: translateY(0)    rotate(0deg); }
+}
+
+/* Top opponent: horizontally centred, cards flipped 180° */
+.opponent-hand--top {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg);
+}
+
+/* Left opponent: rotate the whole row -90° so it fans vertically */
+.opponent-hand--left {
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+/* Right opponent: same but 90° */
+.opponent-hand--right {
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%) rotate(90deg);
+}
+
+/* ── Opponent name labels ── */
+.opponent-name {
+  position: fixed;
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1rem;
+  color: #fff;
+  background: #9f00f5;
+  padding: 5px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 210px;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* centered under the top hand */
+.opponent-name--top {
+  top: 175px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+/* left-aligned, starts after the left hand's visual right edge (~237px) */
+.opponent-name--left {
+  top: 50%;
+  left: 250px;
+  transform: translateY(-50%);
+  text-align: left;
+}
+
+/* right-aligned, ends before the right hand's visual left edge (~237px from right) */
+.opponent-name--right {
+  top: 50%;
+  right: 250px;
+  transform: translateY(-50%);
+  text-align: right;
+}
+
+/* ── Wild card colour picker ── */
+
+.color-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.75) 100%);
+  animation: fadeIn 0.2s ease both;
+}
+
+/* Title floats above the circle, doesn't affect its centering */
+.color-picker__title {
+  position: absolute;
+  top: calc(50% - 110px - 54px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1.1rem;
+  color: #fff;
+  background: #9f00f5;
+  padding: 8px 22px;
+  border-radius: 20px;
+  margin: 0;
+  letter-spacing: 0.06em;
+  animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.color-picker-backdrop--closing {
+  animation: fadeOut 0.25s ease both;
+  pointer-events: none;
+}
+
+/* Single circle, 220×220, split into 4 wedge buttons */
+.color-picker {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  filter: drop-shadow(0 8px 32px rgba(0,0,0,0.5));
+}
+
+.color-picker__btn {
+  position: absolute;
+  inset: 0;
+  background: var(--clr);
+  border: none;
+  cursor: pointer;
+  /* Only animate opacity so transform stays free for hover */
+  animation: popIn 0.3s ease both;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              filter 0.2s ease;
+}
+
+.color-picker__btn:hover {
+  filter: brightness(1.2);
+}
+
+/* SVG arc: M center L edge-point A radius 0 0 1 next-edge-point Z */
+.color-picker__btn--tl { clip-path: path('M 110 110 L 0 110   A 110 110 0 0 1 110 0   Z'); }
+.color-picker__btn--tr { clip-path: path('M 110 110 L 110 0   A 110 110 0 0 1 220 110  Z'); }
+.color-picker__btn--br { clip-path: path('M 110 110 L 220 110  A 110 110 0 0 1 110 220  Z'); }
+.color-picker__btn--bl { clip-path: path('M 110 110 L 110 220  A 110 110 0 0 1 0 110   Z'); }
+
+/* Each wedge pushes away from the centre on hover */
+.color-picker__btn--tl:hover { transform: translate(-10px, -10px); }
+.color-picker__btn--tr:hover { transform: translate( 10px, -10px); }
+.color-picker__btn--br:hover { transform: translate( 10px,  10px); }
+.color-picker__btn--bl:hover { transform: translate(-10px,  10px); }
+
+/* Staggered pop-in */
+.color-picker__btn:nth-child(1) { animation-delay:   0ms; }
+.color-picker__btn:nth-child(2) { animation-delay:  70ms; }
+.color-picker__btn:nth-child(3) { animation-delay: 140ms; }
+.color-picker__btn:nth-child(4) { animation-delay: 210ms; }
+
+@keyframes popIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── SOLO screen effects ── */
+.solo-effects {
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  pointer-events: none;
+}
+
+/* Brief bright flash at the centre */
+.solo-flash {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(159,0,245,0.4) 50%, transparent 75%);
+  animation: soloFlash 0.6s ease-out both;
+}
+
+@keyframes soloFlash {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(0.2); }
+  40%  { opacity: 0.9; transform: translate(-50%, -50%) scale(2.5); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(3); }
+}
+
+/* Sparkle particles that fly outward */
+.solo-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 2px;
+  background: var(--clr);
+  animation: soloParticle 1.8s cubic-bezier(0.2, 0.8, 0.4, 1) both;
+  animation-delay: var(--delay);
+}
+
+@keyframes soloParticle {
+  0%   {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0);
+  }
+  70%  { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(-1 * var(--dist)));
+  }
+}
+
+/* ── SOLO splash ── */
+.solo-splash {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  pointer-events: none;
+  z-index: 200;
+  animation: soloSplash 1.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes soloSplash {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  20%  { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  35%  { transform: translate(-50%, -50%) scale(1); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ── SOLO button ── */
+.solo-btn {
+  position: fixed;
+  bottom: 36px;
+  right: 36px;
+  z-index: 100;
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1.4rem;
+  color: #fff;
+  background: #9f00f5;
+  border: none;
+  border-radius: 20px;
+  padding: 12px 28px;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  box-shadow: 0 4px 20px rgba(159, 0, 245, 0.5);
+  animation: soloAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+             soloPulse 1.2s ease-in-out infinite;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.solo-btn:hover {
+  background: #b400ff;
+  transform: scale(1.07);
+}
+
+.solo-btn--called {
+  background: #444;
+  box-shadow: none;
+  animation: soloAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  cursor: default;
+  opacity: 0.6;
+}
+
+.solo-btn--called:hover {
+  background: #444;
+  transform: none;
+}
+
+@keyframes soloAppear {
+  from { opacity: 0; transform: scale(0.5) translateY(20px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0);    }
+}
+
+@keyframes soloPulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(159, 0, 245, 0.5); }
+  50%       { box-shadow: 0 4px 30px rgba(159, 0, 245, 0.85); }
 }
 
 /* ================================ АНІМАШКИ УРААААА ================================= */
-/* ======= Button animations ======= */
 
 .btn--solid {
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
