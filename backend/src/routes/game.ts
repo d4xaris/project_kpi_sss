@@ -36,6 +36,15 @@ export default async function gameRoutes(app: FastifyInstance) {
       },
     });
 
+    const sessionId = String(game.id);
+
+    app.io.emit("room_created", {
+      roomId: sessionId,
+      roomName: game.sessionName,
+      playerCount: 1,
+      maxPlayers: maxPlayers,
+    });
+
     reply.status(201).send({
       success: true,
       message: "Game created",
@@ -111,11 +120,18 @@ export default async function gameRoutes(app: FastifyInstance) {
       data: { status: "PLAYING" },
     });
 
+    app.io.to(`${gameId}`).emit("game_start", {
+      players: players,
+      status: "PLAYING",
+      // gameSettings: gameSettings
+    });
+
+    app.io.emit("lobby_room_removed", { id: id });
+
     return reply.send({
       success: true,
       messege: "Game started",
       players: players,
-      //gameSettings: gameSettings
     });
   });
 
@@ -150,8 +166,11 @@ export default async function gameRoutes(app: FastifyInstance) {
 
   app.post("/:id/join", async (request, reply) => {
     const { id } = request.params as { id: string };
-    const user = request.user as { id: number };
-    const userId = user.id;
+    const user = request.user as {
+      id: number;
+      nickname: string;
+    };
+    const userId = String(user.id);
 
     const session = await app.prisma.gameSession.findUnique({
       where: { id: parseInt(id) },
@@ -185,10 +204,12 @@ export default async function gameRoutes(app: FastifyInstance) {
       });
     }
 
+    const sessionId = String(session.id);
+
     const activeSession = await app.prisma.gameSession.findFirst({
       where: {
         players: {
-          some: { id: userId },
+          some: { id: user.id },
         },
         status: {
           in: ["LOBBY", "PLAYING"],
@@ -208,9 +229,19 @@ export default async function gameRoutes(app: FastifyInstance) {
       where: { id: session.id },
       data: {
         players: {
-          connect: { id: userId },
+          connect: { id: user.id },
         },
       },
+    });
+
+    app.io.to(`${session.id}`).emit("joined_player", {
+      id: userId,
+      nickname: user.nickname,
+    });
+
+    app.io.emit("lobby_room_updated", {
+      id: sessionId,
+      playerCount: session._count.players + 1,
     });
 
     return {
@@ -222,11 +253,22 @@ export default async function gameRoutes(app: FastifyInstance) {
 
   app.post("/:id/leave", async (request, reply) => {
     const { id } = request.params as { id: string };
-    const user = request.user as { id: number };
+    const user = request.user as {
+      id: number;
+      nickname: string;
+    };
     const sessionId = parseInt(id);
+    const userId = String(user.id);
 
     const session = await app.prisma.gameSession.findUnique({
       where: { id: sessionId },
+      include: {
+        _count: {
+          select: {
+            players: true,
+          },
+        },
+      },
     });
 
     if (!session) {
@@ -239,6 +281,11 @@ export default async function gameRoutes(app: FastifyInstance) {
     if (session.hostId === user.id) {
       await app.prisma.gameSession.delete({
         where: { id: sessionId },
+      });
+      app.io.to(`${sessionId}`).emit("game_deleted");
+
+      app.io.emit("lobby_room_removed", {
+        id: id,
       });
 
       return {
@@ -253,6 +300,16 @@ export default async function gameRoutes(app: FastifyInstance) {
             disconnect: { id: user.id },
           },
         },
+      });
+
+      app.io.to(`${sessionId}`).emit("player_left", {
+        socketId: userId,
+        nickname: user.nickname,
+      });
+
+      app.io.emit("lobby_room_updated", {
+        id: id,
+        playerCount: session._count.players,
       });
 
       return {
@@ -322,6 +379,10 @@ export default async function gameRoutes(app: FastifyInstance) {
         },
       }),
     ]);
+
+    app.io.to(`${sessionId}`).emit("game_finished", {
+      winnerId: winnerId,
+    });
 
     return {
       success: true,
