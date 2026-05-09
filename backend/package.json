@@ -15,6 +15,7 @@
     "fastify-plugin": "^5.1.0",
     "fastify-socket.io": "^5.1.0",
     "pg": "^8.20.0",
+    "reflect-metadata": "^0.2.2",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {

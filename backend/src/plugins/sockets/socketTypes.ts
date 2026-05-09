@@ -1,5 +1,15 @@
 export interface ClientToServer {
-  join_room: (data: { gameId: number; nickname: string }) => void;
+  join_room: (data: {
+    gameId: number;
+    nickname: string;
+    userId: number;
+  }) => void;
+  leave_room: (data: {
+    gameId: number;
+    nickname: string;
+    userId: number;
+  }) => void;
+  game_start_request: (data: { gameId: number }) => void;
 }
 
 export interface ServerToClient {
@@ -8,8 +18,11 @@ export interface ServerToClient {
   error_message: (data: { code?: string; message: string }) => void;
   player_left: (data: { socketId: string; nickname?: string }) => void;
   game_deleted: () => void;
-  game_start: (data: { players: number[]; status: string }) => void;
-  // for game_start will be added gameSettings
+  game_start_settings: (data: {
+    players: number[];
+    status: string;
+    gameSettings: {};
+  }) => void;
   game_finished: (data: { winnerId: number }) => void;
   room_created: (data: {
     roomId: string;
@@ -19,4 +32,10 @@ export interface ServerToClient {
   }) => void;
   lobby_room_removed: (data: { id: string }) => void;
   lobby_room_updated: (data: { id: string; playerCount: number }) => void;
+}
+
+export interface SocketData {
+  nickname: string;
+  userId: number;
+  gameId: number;
 }

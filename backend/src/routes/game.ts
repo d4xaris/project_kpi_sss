@@ -38,12 +38,12 @@ export default async function gameRoutes(app: FastifyInstance) {
 
     const sessionId = String(game.id);
 
-    app.io.emit("room_created", {
-      roomId: sessionId,
-      roomName: game.sessionName,
-      playerCount: 1,
-      maxPlayers: maxPlayers,
-    });
+    // app.io.emit("room_created", {
+    //   roomId: sessionId,
+    //   roomName: game.sessionName,
+    //   playerCount: 1,
+    //   maxPlayers: maxPlayers,
+    // });
 
     reply.status(201).send({
       success: true,
@@ -111,19 +111,9 @@ export default async function gameRoutes(app: FastifyInstance) {
 
     const players = game.players.map((p) => p.id);
 
-    const room = new GameRoom(players);
-    // next line is the function of game settings which will be used in game(can't do it right now)
-    // const gameSettings = room.function_of_settings_calculation()
-
     await app.prisma.gameSession.update({
       where: { id: gameId },
       data: { status: "PLAYING" },
-    });
-
-    app.io.to(`${gameId}`).emit("game_start", {
-      players: players,
-      status: "PLAYING",
-      // gameSettings: gameSettings
     });
 
     app.io.emit("lobby_room_removed", { id: id });
@@ -132,6 +122,7 @@ export default async function gameRoutes(app: FastifyInstance) {
       success: true,
       messege: "Game started",
       players: players,
+      gameId: gameId,
     });
   });
 
@@ -234,16 +225,6 @@ export default async function gameRoutes(app: FastifyInstance) {
       },
     });
 
-    app.io.to(`${session.id}`).emit("joined_player", {
-      id: userId,
-      nickname: user.nickname,
-    });
-
-    app.io.emit("lobby_room_updated", {
-      id: sessionId,
-      playerCount: session._count.players + 1,
-    });
-
     return {
       success: true,
       message: "You successfully joined the room",
@@ -300,16 +281,6 @@ export default async function gameRoutes(app: FastifyInstance) {
             disconnect: { id: user.id },
           },
         },
-      });
-
-      app.io.to(`${sessionId}`).emit("player_left", {
-        socketId: userId,
-        nickname: user.nickname,
-      });
-
-      app.io.emit("lobby_room_updated", {
-        id: id,
-        playerCount: session._count.players,
       });
 
       return {

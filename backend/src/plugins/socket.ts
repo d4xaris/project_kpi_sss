@@ -1,43 +1,85 @@
 import fp from "fastify-plugin";
 import { Server } from "socket.io";
-import type { ClientToServer, ServerToClient } from "./shared/socketTypes.js";
+import type {
+  ClientToServer,
+  ServerToClient,
+  SocketData,
+} from "./sockets/socketTypes.js";
+import { Deck } from "../game/Deck.js";
+import { GameState } from "../game/GameState.js";
+import { registerSocketHandlers } from "./sockets/handler.js";
+import { GameController } from "./sockets/controllers.js";
 
 declare module "fastify" {
   interface FastifyInstance {
-    io: Server<ClientToServer, ServerToClient>;
+    io: Server<ClientToServer, ServerToClient, SocketData>;
   }
 }
 
 export default fp(async (app) => {
   try {
-    const io = new Server<ClientToServer, ServerToClient>(app.server, {
-      cors: {
-        origin:
-          process.env.NODE_ENV === "production"
-            ? process.env.FRONTEND_URL
-            : true,
-        methods: ["GET", "POST", "PATCH", "DELETE"], // will add new methods later
-        credentials: true,
+    const io = new Server<ClientToServer, ServerToClient, SocketData>(
+      app.server,
+      {
+        cors: {
+          origin:
+            process.env.NODE_ENV === "production"
+              ? process.env.FRONTEND_URL
+              : true,
+          methods: ["GET", "POST", "PATCH", "DELETE"], // will add new methods later
+          credentials: true,
+        },
       },
-    });
+    );
 
     if (!app.hasDecorator("io")) {
       app.decorate("io", io);
     }
 
+    const gameController = new GameController();
+
     io.on("connection", (socket) => {
+      app.log.info(`Socket connected: ${socket.id}`);
+
+      registerSocketHandlers(socket, app, [gameController]);
+
       socket.on("error", (error) => {
         app.log.error(`Socket error for ID ${socket.id}: ${error.message}`);
       });
 
-      app.log.info(`Socket connected: ${socket.id}`);
+      socket.on("disconnecting", async () => {
+        app.log.info(`Socket disconnecting: ${socket.id}`);
 
-      socket.on("join_room", async (data) => {
+        const { gameId, nickname, userId } = socket.data;
+
+        if (!gameId || !userId) return;
+
         try {
-          const { gameId, nickname } = data;
+          await app.prisma.gameSession.update({
+            where: { id: Number(gameId) },
+            data: {
+              players: {
+                disconnect: {
+                  id: Number(userId),
+                },
+              },
+            },
+          });
+
+          socket.to(`${gameId}`).emit("player_left", {
+            socketId: String(userId),
+            nickname: nickname,
+          });
 
           const session = await app.prisma.gameSession.findUnique({
-            where: { id: gameId },
+            where: { id: Number(gameId) },
+            include: {
+              _count: {
+                select: {
+                  players: true,
+                },
+              },
+            },
           });
 
           if (!session) {
@@ -47,46 +89,18 @@ export default fp(async (app) => {
             });
           }
 
-          const roomName = `${gameId}`;
-          socket.join(roomName);
-          socket.data.nickname = nickname;
-
-          const currentSession = await app.prisma.gameSession.findUnique({
-            where: { id: gameId },
-            include: { players: true },
+          app.io.emit("lobby_room_updated", {
+            id: String(gameId),
+            playerCount: session._count.players,
           });
 
-          if (!currentSession) {
-            return socket.emit("error_message", {
-              code: "NOT_FOUND",
-              message: "Game not found",
-            });
-          }
-
-          socket.emit("current_players", currentSession.players);
-
-          socket.to(roomName).emit("joined_player", {
-            id: socket.id,
-            nickname: nickname,
-          });
+          app.log.info(
+            `User ${nickname} (ID: ${userId}) automatically removed from room ${gameId}`,
+          );
         } catch (err) {
-          app.log.error(err);
-          socket.emit("error_message", {
-            message: "An error has occured",
-          });
-        }
-      });
-
-      socket.on("disconnecting", () => {
-        app.log.info(`Socket disconnecting: ${socket.id}`);
-
-        for (const roomName of socket.rooms) {
-          if (roomName !== socket.id) {
-            socket.to(roomName).emit("player_left", {
-              socketId: socket.id,
-              nickname: socket.data.nickname,
-            });
-          }
+          app.log.error(
+            `Failed to handle disconnect for user ${userId}: ${err}`,
+          );
         }
       });
 
