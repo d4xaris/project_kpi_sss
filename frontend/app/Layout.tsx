@@ -57,7 +57,8 @@ function YouTubePlayer() {
   const isGame = location.pathname.startsWith("/game");
   isGameRef.current = isGame;
 
-  const hasClicked = useRef(false);
+  const hasClicked   = useRef(false);
+  const musicDelayId = useRef<ReturnType<typeof setTimeout> | null>(null);
   const vol = () => parseFloat(localStorage.getItem('musicVolume') ?? '0.3') * 100;
 
   const unmute = (p: any) => { p.unMute(); p.setVolume(vol()); };
@@ -72,14 +73,23 @@ function YouTubePlayer() {
           onReady: (e: any) => {
             ready.current = true;
             if (isGameRef.current) {
+              // On game page: load silently, unmute after start sound finishes
+              e.target.setVolume(0);
+              e.target.unMute();
               e.target.loadVideoById(GAME_VIDEO_ID);
+              if (hasClicked.current) {
+                musicDelayId.current = setTimeout(() => {
+                  if (isGameRef.current) e.target.setVolume(vol());
+                  musicDelayId.current = null;
+                }, 3500);
+              }
             } else {
               e.target.setVolume(0);
               e.target.setLoop(true);
               e.target.playVideo();
+              // If user already clicked before player was ready, unmute now
+              if (hasClicked.current) unmute(e.target);
             }
-            // If user already clicked before player was ready, unmute now
-            if (hasClicked.current) unmute(e.target);
           },
           onStateChange: (e: any) => {
             if (e.data === (window as any).YT.PlayerState.ENDED && isGameRef.current) {
@@ -115,10 +125,23 @@ function YouTubePlayer() {
   // Route changes: game song on /game, playlist everywhere else
   useEffect(() => {
     if (!ready.current) return;
+
+    // Clear any pending delayed unmute from a previous game entry
+    if (musicDelayId.current) {
+      clearTimeout(musicDelayId.current);
+      musicDelayId.current = null;
+    }
+
     if (isGame) {
+      // Load immediately but stay silent — let the start sound effect finish first
+      player.current.setVolume(0);
       player.current.unMute();
-      player.current.setVolume(vol());
       player.current.loadVideoById(GAME_VIDEO_ID);
+      // Unmute after 3.5 s (start sound + curtain animation finish)
+      musicDelayId.current = setTimeout(() => {
+        if (isGameRef.current) player.current.setVolume(vol());
+        musicDelayId.current = null;
+      }, 3500);
     } else {
       player.current.loadPlaylist({ listType: 'playlist', list: PLAYLIST_ID });
       player.current.setLoop(true);

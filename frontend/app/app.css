@@ -827,6 +827,13 @@ span {
   user-select: none;
 }
 
+/* Outer wrapper: owns position transitions — isolated from the deal animation */
+.opponent-card-fan {
+  display: flex;
+  transition: margin-left 0.3s ease, transform 0.3s ease;
+}
+
+/* Inner: deal animation target only — no transition so it never fights translateY */
 .opponent-card {
   display: flex;
 }
@@ -865,14 +872,12 @@ span {
   transform: translateX(-50%) rotate(180deg);
 }
 
-/* Left opponent: rotate the whole row -90° so it fans vertically */
 .opponent-hand--left {
   top: 50%;
   left: 20px;
   transform: translateY(-50%) rotate(-90deg);
 }
 
-/* Right opponent: same but 90° */
 .opponent-hand--right {
   top: 50%;
   right: 20px;
@@ -1021,48 +1026,92 @@ span {
   pointer-events: none;
 }
 
-/* Brief bright flash at the centre */
+/* Crisp expanding ring — centered via margin, no translate in keyframes */
 .solo-flash {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: 300px;
-  height: 300px;
+  width: 200px;
+  height: 200px;
+  margin: -100px 0 0 -100px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(159,0,245,0.4) 50%, transparent 75%);
-  animation: soloFlash 0.6s ease-out both;
+  border: 5px solid #9f00f5;
+  background: transparent;
+  transform-origin: center center;
+  animation: soloFlash 0.55s ease-out both;
+}
+
+/* Second outer ring for depth */
+.solo-flash::after {
+  content: '';
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  border: 3px solid rgba(159, 0, 245, 0.4);
+  transform-origin: center center;
+  animation: soloFlashOuter 0.55s 0.06s ease-out both;
 }
 
 @keyframes soloFlash {
-  0%   { opacity: 1; transform: translate(-50%, -50%) scale(0.2); }
-  40%  { opacity: 0.9; transform: translate(-50%, -50%) scale(2.5); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(3); }
+  0%   { opacity: 1; transform: scale(0.05); }
+  50%  { opacity: 1; transform: scale(1);    }
+  100% { opacity: 0; transform: scale(2.4);  }
 }
 
-/* Sparkle particles that fly outward */
+@keyframes soloFlashOuter {
+  0%   { opacity: 0.7; transform: scale(0.05); }
+  50%  { opacity: 0.7; transform: scale(1);    }
+  100% { opacity: 0;   transform: scale(2.8);  }
+}
+
+/* Colored sparkle particles — centered via margin so rotate() pivots from exact screen center */
 .solo-particle {
   position: absolute;
   top: 50%;
   left: 50%;
   width: var(--size);
   height: var(--size);
+  margin-top: calc(var(--size) / -2);
+  margin-left: calc(var(--size) / -2);
   border-radius: 2px;
   background: var(--clr);
-  animation: soloParticle 1.8s cubic-bezier(0.2, 0.8, 0.4, 1) both;
+  transform-origin: center center;
+  animation: soloParticle 1.5s cubic-bezier(0.2, 0.8, 0.4, 1) both;
   animation-delay: var(--delay);
 }
 
 @keyframes soloParticle {
-  0%   {
-    opacity: 1;
-    transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0);
-  }
+  0%   { opacity: 1; transform: rotate(var(--angle)) translateY(0); }
   70%  { opacity: 1; }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) rotate(var(--angle)) translateY(calc(-1 * var(--dist)));
-  }
+  100% { opacity: 0; transform: rotate(var(--angle)) translateY(calc(-1 * var(--dist))); }
+}
+
+/* White confetti particles that burst behind the colored ones */
+.solo-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.solo-confetti-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--size);
+  height: var(--size);
+  margin-top: calc(var(--size) / -2);
+  margin-left: calc(var(--size) / -2);
+  border-radius: 2px;
+  background: #fff;
+  transform-origin: center center;
+  animation: soloConfetti 1.4s cubic-bezier(0.15, 0.8, 0.35, 1) var(--delay) both;
+}
+
+@keyframes soloConfetti {
+  0%   { opacity: 0.95; transform: rotate(var(--angle)) translateY(0) rotate(var(--rot)); }
+  75%  { opacity: 0.8; }
+  100% { opacity: 0;    transform: rotate(var(--angle)) translateY(calc(-1 * var(--dist))) rotate(calc(var(--rot) + 200deg)); }
 }
 
 /* ── SOLO splash ── */
@@ -1074,7 +1123,7 @@ span {
   width: 600px;
   pointer-events: none;
   z-index: 200;
-  animation: soloSplash 1.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: soloSplash 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes soloSplash {
@@ -1132,6 +1181,77 @@ span {
 @keyframes soloPulse {
   0%, 100% { box-shadow: 0 4px 20px rgba(159, 0, 245, 0.5); }
   50%       { box-shadow: 0 4px 30px rgba(159, 0, 245, 0.85); }
+}
+
+/* ── CATCH button ── */
+.catch-btn {
+  position: fixed;
+  z-index: 100;
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1.1rem;
+  color: #fff;
+  background: #e05c00;
+  border: none;
+  border-radius: 16px;
+  padding: 10px 22px;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  box-shadow: 0 4px 18px rgba(224, 92, 0, 0.55);
+  animation: catchAppear 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+             catchPulse 0.9s ease-in-out infinite;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.catch-btn:hover { background: #ff6b00; }
+
+/* Positioned just below the top opponent's name label */
+.catch-btn--top {
+  top: 215px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Positioned to the right of the left opponent's name */
+.catch-btn--left {
+  top: 50%;
+  left: 380px;
+  transform: translateY(-50%);
+}
+
+/* Positioned to the left of the right opponent's name */
+.catch-btn--right {
+  top: 50%;
+  right: 380px;
+  transform: translateY(-50%);
+}
+
+@keyframes catchAppear {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1);   }
+}
+
+/* catchAppear uses plain scale so transform-based centering stays intact on --top/left/right */
+.catch-btn--top {
+  animation: catchAppearTop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+             catchPulse 0.9s ease-in-out 0.35s infinite;
+}
+.catch-btn--left, .catch-btn--right {
+  animation: catchAppearSide 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+             catchPulse 0.9s ease-in-out 0.35s infinite;
+}
+
+@keyframes catchAppearTop {
+  from { opacity: 0; transform: translateX(-50%) scale(0.6); }
+  to   { opacity: 1; transform: translateX(-50%) scale(1);   }
+}
+@keyframes catchAppearSide {
+  from { opacity: 0; transform: translateY(-50%) scale(0.6); }
+  to   { opacity: 1; transform: translateY(-50%) scale(1);   }
+}
+
+@keyframes catchPulse {
+  0%, 100% { box-shadow: 0 4px 18px rgba(224, 92, 0, 0.55); }
+  50%       { box-shadow: 0 4px 28px rgba(224, 92, 0, 0.9);  }
 }
 
 /* ================================ АНІМАШКИ УРААААА ================================= */
@@ -1194,3 +1314,93 @@ span {
 .lobby-row:nth-child(2) { animation: fadeSlideUp 0.5s 0.2s cubic-bezier(0.4, 0, 0.2, 1) both; }
 .lobby-row:nth-child(3) { animation: fadeSlideUp 0.5s 0.3s cubic-bezier(0.4, 0, 0.2, 1) both; }
 .lobby-row:nth-child(4) { animation: fadeSlideUp 0.5s 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+/* ======= Win Screen ======= */
+
+.win-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Same gradient as the app body */
+  background: linear-gradient(var(--bg-angle, 90deg), #9f00f5, #9ba5ff);
+  animation: winFadeIn 0.45s ease both;
+}
+
+@keyframes winFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.win-screen--exiting {
+  pointer-events: none;
+}
+
+.win-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0;
+  animation: winContentPop 0.55s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes winContentPop {
+  from { opacity: 0; transform: scale(0.85) translateY(20px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+.win-nickname {
+  font-family: "Hammersmith One", sans-serif;
+  font-size: clamp(2rem, 4.5vw, 4rem);
+  color: #fff;
+  margin: 0;
+  line-height: 1.1;
+  user-select: none;
+}
+
+.win-won {
+  font-family: "Hammersmith One", sans-serif;
+  font-size: clamp(2rem, 4.5vw, 4rem);
+  margin: 0 0 40px;
+  line-height: 1.1;
+  user-select: none;
+  /* Solid light lavender — clearly visible and glowing */
+  color: #c77dff;
+  text-shadow:
+    0 0 18px rgba(159, 0, 245, 1),
+    0 0 40px rgba(159, 0, 245, 0.7),
+    0 0 80px rgba(159, 0, 245, 0.4);
+  animation: winGlow 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes winGlow {
+  from {
+    text-shadow:
+      0 0 18px rgba(159, 0, 245, 1),
+      0 0 40px rgba(159, 0, 245, 0.7),
+      0 0 80px rgba(159, 0, 245, 0.4);
+  }
+  to {
+    text-shadow:
+      0 0 28px rgba(159, 0, 245, 1),
+      0 0 60px rgba(159, 0, 245, 0.85),
+      0 0 110px rgba(159, 0, 245, 0.5);
+  }
+}
+
+.win-home-btn {
+  font-size: 1rem !important;
+  padding: 12px 36px !important;
+  font-weight: 700 !important;
+  animation: winBtnPop 0.4s 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes winBtnPop {
+  from { opacity: 0; transform: scale(0.75); }
+  to   { opacity: 1; transform: scale(1);    }
+}
