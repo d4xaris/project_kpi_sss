@@ -15,25 +15,21 @@ export default function OpponentHand({
 }) {
   const fanned = isActive;
   const isLR   = position === 'left' || position === 'right';
-  const mid    = (count - 1) / 2; // centre index for symmetric spread
 
   return (
-    <div className={`opponent-hand opponent-hand--${position}`}>
+    <div className={[
+      `opponent-hand opponent-hand--${position}`,
+      isActive && isLR ? 'opponent-hand--lr-active' : '',
+    ].join(' ')}>
       {Array.from({ length: count }).map((_, i) => {
         let wrapperStyle: React.CSSProperties;
 
         if (isLR) {
-          // Left/right containers are rotated ±90°, so local X = vertical screen axis.
-          // We spread via translateX centred on the middle card so the group never
-          // shifts as a whole — it fans open symmetrically (some go up, some go down).
-          // margin-left stays at –30 to keep the base overlap constant.
-          const offset = fanned ? (i - mid) * 33 : 0;
-          wrapperStyle = {
-            marginLeft: i === 0 ? 0 : -30,
-            transform:  `translateX(${offset}px)`,
-          };
+          // Left/right: no margin fan (it maps to vertical on screen — looks bad).
+          // Active state is handled by CSS class on the container instead.
+          wrapperStyle = { marginLeft: i === 0 ? 0 : -30 };
         } else {
-          // Top: local X is effectively horizontal — plain margin-left fan is fine.
+          // Top: fan out horizontally when active.
           wrapperStyle = {
             marginLeft: i === 0 ? 0 : fanned ? 3 : -30,
           };

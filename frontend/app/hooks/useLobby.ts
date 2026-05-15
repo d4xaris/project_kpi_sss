@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { authHeaders } from "./useAuth";
+import { apiFetch } from "./useAuth";
 
 // Set to false once the real backend is running.
 const USE_MOCK = true;
@@ -35,7 +35,7 @@ export function useLobby() {
       setLoading(false);
       return;
     }
-    const res  = await fetch("/game/sessions", { headers: authHeaders() });
+    const res  = await apiFetch("/game/sessions");
     const data = await res.json();
     if (res.ok) setRooms(data.rooms.filter((r: RoomSummary) => r.playerCount > 0));
     setLoading(false);
@@ -49,10 +49,7 @@ export function useLobby() {
   //   so the player starts receiving room events ('room:state', 'player:join', etc.)
   const joinRoom = async (roomId: number): Promise<boolean> => {
     if (USE_MOCK) return true;
-    const res = await fetch(`/game/${roomId}/join`, {
-      method: "POST",
-      headers: authHeaders(),
-    });
+    const res = await apiFetch(`/game/${roomId}/join`, { method: "POST" });
     return res.ok;
   };
 

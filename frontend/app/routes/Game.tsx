@@ -3,18 +3,26 @@ import { useLocation, useBlocker, useNavigate } from 'react-router';
 import { MOCK_HAND, MOCK_TOP_CARD, MOCK_OPPONENTS } from '~/mockData';
 import SSSCard from '~/components/SSSCard';
 import { sounds } from '~/sounds';
-import { useAuth } from '~/hooks/useAuth';
+import { useAuth, apiFetch } from '~/hooks/useAuth';
 import ColorPicker, { type CardColor } from '~/components/ColorPicker';
 import OpponentLayout from '~/components/OpponentLayout';
 import WinScreen from '~/components/WinScreen';
 import SoloEffects from '~/components/SoloEffects';
+import CatchEffect from '~/components/CatchEffect';
 import { useSolo } from '~/hooks/useSolo';
+import { useCatch } from '~/hooks/useCatch';
 
 type Phase = 'closing' | 'closed' | 'opening' | 'done';
 type Turn  = 'player' | 'top' | 'left' | 'right';
 
 interface Card          { color: string; value: string }
-interface LocationState { fromRoom?: boolean; playerCount?: number }
+interface HandCard extends Card { uid: string }
+interface LocationState { fromRoom?: boolean; playerCount?: number; sessionId?: number }
+
+// Each card that enters any hand gets a unique id so the deal animation
+// always fires — even if the card lands at an index a previous card occupied.
+let _uidCounter = 0;
+const mkUid = () => String(_uidCounter++);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -38,12 +46,21 @@ const WILD_GLOW_COLORS: Record<CardColor, string> = {
 const cardId = ({ color, value }: Card) =>
   color === 'wild' ? value : `${color}_${value}`;
 
+// A card is playable if it matches the top card's color/value, or is a wild,
+// or matches the chosen wild color if one is active.
+const isPlayable = (card: Card, top: Card, wildColor: CardColor | null): boolean => {
+  if (card.color === 'wild') return true;
+  if (wildColor)             return card.color === wildColor;
+  return card.color === top.color || card.value === top.value;
+};
+
 // Generates a random coloured number card for draw effects
 const DRAW_COLORS = ['crimson', 'purple', 'yellow', 'orange'] as const;
 const DRAW_VALS   = ['1','2','3','4','5','6','7','8','9'] as const;
-const randomCard  = (): Card => ({
+const randomCard  = (): HandCard => ({
   color: DRAW_COLORS[Math.floor(Math.random() * DRAW_COLORS.length)],
   value: DRAW_VALS  [Math.floor(Math.random() * DRAW_VALS.length)],
+  uid:   mkUid(),
 });
 
 // ─── Game ─────────────────────────────────────────────────────────────────────
@@ -54,13 +71,14 @@ export default function Game() {
   const { user }  = useAuth();
   const fromRoom    = (location.state as LocationState)?.fromRoom === true;
   const playerCount = (location.state as LocationState)?.playerCount ?? 4;
+  const sessionId   = (location.state as LocationState)?.sessionId ?? null;
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [phase, setPhase]               = useState<Phase>(fromRoom ? 'closed' : 'closing');
   const [winner, setWinner]             = useState<string | null>(null);
   const [winExiting, setWinExiting]     = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [dealtCards, setDealtCards]     = useState<Set<number>>(new Set());
+  const [dealtCards, setDealtCards]     = useState<Set<string>>(new Set());
   const [handHovered, setHandHovered]   = useState(false);
 
   // ── Game state (sourced from socket once wired) ────────────────────────────
@@ -70,7 +88,9 @@ export default function Game() {
   //     snapshot.topCard       → Card            → setTopCard
   //     snapshot.currentTurn   → Turn            → setCurrentTurn
   //     snapshot.opponents     → { top, left, right }: { nickname, cardCount }
-  const [hand, setHand]                       = useState(MOCK_HAND);
+  const [hand, setHand]                       = useState<HandCard[]>(() =>
+    MOCK_HAND.map(c => ({ ...c, uid: mkUid() }))
+  );
   const [topCard, setTopCard]                 = useState(MOCK_TOP_CARD);
   const [currentTurn, setCurrentTurn]         = useState<Turn>('player');
   const [direction, setDirection]             = useState<1 | -1>(1);   // 1=clockwise, -1=counter
@@ -79,13 +99,8 @@ export default function Game() {
   // Per-opponent card counts (HONIKE: replace with snapshot.opponents[pos].cardCount)
   const [oppCounts, setOppCounts] = useState({ top: 6, left: 6, right: 6 });
 
-  // ── Catch mechanic ───────────────────────────────────────────────────────
-  const [catchTarget, setCatchTarget] = useState<'top' | 'left' | 'right' | null>(null);
-
   // Tracks all mock-turn timeouts so we can cancel them if needed
-  const turnTimers       = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const catchTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevOppCountsRef = useRef({ top: 6, left: 6, right: 6 });
+  const turnTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Cycles through plausible mock cards for the opponents to "play"
   // HONIKE: remove — the actual card comes from socket 'game:cardPlayed' event
@@ -102,6 +117,11 @@ export default function Game() {
 
   const { soloCalled, showSoloSplash, soloEffects, handleSolo } = useSolo(hand.length);
 
+  const { catchTarget, showCatchEffect, handleCatch } = useCatch(
+    oppCounts,
+    (slot) => setOppCounts(prev => ({ ...prev, [slot]: prev[slot] + 2 })),
+  );
+
   // Block in-app navigation while the game is live (allow once winner shown)
   useBlocker(() => phase === 'done' && winner === null);
 
@@ -112,10 +132,9 @@ export default function Game() {
     return () => window.removeEventListener('beforeunload', handler);
   }, []);
 
-  // Cancel any pending turn/catch timers on unmount
+  // Cancel any pending turn timers on unmount
   useEffect(() => () => {
     turnTimers.current.forEach(clearTimeout);
-    if (catchTimerRef.current) clearTimeout(catchTimerRef.current);
   }, []);
 
   // ── Curtain sequence ──────────────────────────────────────────────────────
@@ -222,6 +241,41 @@ export default function Game() {
     //         server validates legality, then broadcasts game:cardPlayed + game:turn
   };
 
+  const hasPlayableCard = hand.some(c => isPlayable(c, topCard, activeWildColor));
+
+  const handleDeckClick = () => {
+    if (currentTurn !== 'player') return;
+    if (hasPlayableCard) return;
+
+    // Draw one card from the deck
+    // HONIKE: socket.emit('game:draw') → server deals a real card and broadcasts 'game:draw'
+    setHand(prev => [...prev, randomCard()]);
+
+    // End the player's turn and cycle through opponents as normal
+    turnTimers.current.forEach(clearTimeout);
+    turnTimers.current = [];
+
+    const opponents = (OPPONENT_ORDER[playerCount] ?? OPPONENT_ORDER[4])[direction];
+    const TURN_MS   = 1800;
+    const PLAY_MS   = 1000;
+    let base = 0;
+
+    opponents.forEach(slot => {
+      turnTimers.current.push(setTimeout(() => setCurrentTurn(slot), base));
+      turnTimers.current.push(setTimeout(() => {
+        setOppCounts(prev => ({ ...prev, [slot]: Math.max(0, prev[slot] - 1) }));
+        const played = MOCK_OPP_CARDS[mockOppIdx.current % MOCK_OPP_CARDS.length];
+        mockOppIdx.current += 1;
+        setTopCard(played as Card);
+        if (played.value === 'reverse') setDirection(d => (d * -1) as 1 | -1);
+        if (played.value === 'drawtwo') setHand(prev => [...prev, randomCard(), randomCard()]);
+      }, base + PLAY_MS));
+      base += TURN_MS;
+    });
+
+    turnTimers.current.push(setTimeout(() => setCurrentTurn('player'), base));
+  };
+
   const handleColorPick = (color: CardColor) => {
     setShowColorPicker(false);
     setActiveWildColor(color);
@@ -230,43 +284,38 @@ export default function Game() {
   };
 
   // ── Win trigger ───────────────────────────────────────────────────────────
-  // HONIKE: replace hand.length === 0 with socket.on('game:winner', ({ nickname }) => setWinner(nickname))
+  // HONIKE: replace the hand.length check with:
+  //   socket.on('game:winner', ({ userId, nickname }) => {
+  //     setWinner(nickname);
+  //     if (sessionId) apiFetch(`/game/${sessionId}/finish`, {
+  //       method: 'POST',
+  //       body: JSON.stringify({ winnerId: userId }),
+  //     });
+  //   })
   useEffect(() => {
     if (hand.length === 0 && phase === 'done') {
       const nick = user?.nickname ?? 'You';
-      // small delay so the last card's play animation finishes first
-      setTimeout(() => setWinner(nick), 500);
+      setTimeout(() => {
+        setWinner(nick);
+        // Call finish endpoint to record stats for all players
+        if (sessionId && user?.id) {
+          apiFetch(`/game/${sessionId}/finish`, {
+            method: 'POST',
+            body: JSON.stringify({ winnerId: user.id }),
+          }).catch(() => {});
+        }
+      }, 500);
     }
   }, [hand.length, phase]);
 
-  // ── Catch-window: open 3-second window when an opponent drops to 1 card ──
-  useEffect(() => {
-    const prev = prevOppCountsRef.current;
-    ((['top', 'left', 'right'] as const)).forEach(slot => {
-      if (prev[slot] > 1 && oppCounts[slot] === 1) {
-        if (catchTimerRef.current) clearTimeout(catchTimerRef.current);
-        setCatchTarget(slot);
-        catchTimerRef.current = setTimeout(() => setCatchTarget(null), 3000);
-      }
-    });
-    prevOppCountsRef.current = { ...oppCounts };
-  }, [oppCounts]);
-
-  const handleCatch = (slot: 'top' | 'left' | 'right') => {
-    if (catchTimerRef.current) clearTimeout(catchTimerRef.current);
-    setCatchTarget(null);
-    // Penalty: +2 cards to the opponent who didn't call SOLO
-    setOppCounts(prev => ({ ...prev, [slot]: prev[slot] + 2 }));
-    // HONIKE: socket.emit('game:catch', { slot }) → server adds +2 to that player
-  };
 
   const handleGoHome = () => {
     setWinExiting(true);           // triggers curtain close
     setTimeout(() => navigate('/'), 750); // navigate after curtain fully closed
   };
 
-  const onDealEnd = (i: number) =>
-    setDealtCards(prev => new Set([...prev, i]));
+  const onDealEnd = (uid: string) =>
+    setDealtCards(prev => new Set([...prev, uid]));
 
   return (
     <div className="game">
@@ -288,7 +337,10 @@ export default function Game() {
       {phase === 'done' && (
         <>
           {/* Deck + discard pile */}
-          <div className="game-deck">
+          <div
+            className={`game-deck${currentTurn === 'player' && !hasPlayableCard ? ' game-deck--active' : ''}`}
+            onClick={handleDeckClick}
+          >
             <SSSCard id="back" height={110} />
           </div>
           <div
@@ -315,11 +367,12 @@ export default function Game() {
             onMouseLeave={() => { setHandHovered(false); setHoveredIndex(null); }}
           >
             {hand.map((card, i) => {
-              const isDealing = !dealtCards.has(i);
+              const isDealing = !dealtCards.has(card.uid);
               return (
-                // Static wrapper holds events + margin — never transforms, so hover never flickers
+                // key={card.uid} keeps React from reusing DOM nodes across positions,
+                // so the deal animation always fires even for newly drawn cards.
                 <div
-                  key={i}
+                  key={card.uid}
                   className="game-card-hit"
                   style={{
                     marginLeft: i === 0 ? 0 : handHovered ? 3 : -30,
@@ -336,7 +389,7 @@ export default function Game() {
                       isDealing          ? 'game-card--dealing'  : '',
                     ].join(' ')}
                     style={{ animationDelay: isDealing ? `${i * 90}ms` : '0ms' }}
-                    onAnimationEnd={() => onDealEnd(i)}
+                    onAnimationEnd={() => onDealEnd(card.uid)}
                   >
                     <SSSCard id={cardId(card)} height={110} />
                   </div>
@@ -345,31 +398,36 @@ export default function Game() {
             })}
           </div>
 
-          {/* SOLO button — appears when 1 card left */}
-          {hand.length === 1 && (
-            <button
-              className={`solo-btn${soloCalled ? ' solo-btn--called' : ''}`}
-              onClick={handleSolo}
-            >
-              SOLO
-            </button>
-          )}
-
-          {/* CATCH button — appears for 3 s when an opponent drops to 1 card */}
-          {/* HONIKE: replace catchTarget with a socket event 'game:solo' → { slot } */}
-          {catchTarget && (
-            <button
-              className={`catch-btn catch-btn--${catchTarget}`}
-              onClick={() => handleCatch(catchTarget)}
-            >
-              CATCH!
-            </button>
+          {/* Action buttons — centered as a pair at the bottom */}
+          {/* HONIKE: catchTarget → replace with socket event 'game:solo' → { slot } */}
+          {(hand.length === 1 || catchTarget) && (
+            <div className="game-actions">
+              {catchTarget && (
+                <button
+                  className="catch-btn"
+                  onClick={() => handleCatch(catchTarget)}
+                >
+                  CATCH!
+                </button>
+              )}
+              {hand.length === 1 && (
+                <button
+                  className={`solo-btn${soloCalled ? ' solo-btn--called' : ''}`}
+                  onClick={handleSolo}
+                >
+                  SOLO
+                </button>
+              )}
+            </div>
           )}
         </>
       )}
 
       {/* SOLO effects */}
       <SoloEffects showEffects={soloEffects} showSplash={showSoloSplash} />
+
+      {/* CATCH effect */}
+      <CatchEffect show={showCatchEffect} />
 
       {showColorPicker && <ColorPicker onPick={handleColorPick} />}
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import Button from "~/components/Button";
-import { useAuth, authHeaders } from "~/hooks/useAuth";
+import { useAuth, apiFetch } from "~/hooks/useAuth";
 
 interface Stats {
   gamesPlayed: number;
@@ -15,9 +15,9 @@ export default function Stats() {
   const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/auth/me", { headers: authHeaders() })
+    apiFetch("/auth/me")
       .then(r => r.json())
-      .then(data => setStats({ gamesPlayed: data.gamesPlayed, gamesWon: data.totalWins }))
+      .then(data => setStats({ gamesPlayed: data.user.gamesPlayed, gamesWon: data.user.totalWins }))
       .catch(() => setStats(null))
       .finally(() => setStatsLoading(false));
   }, []);
