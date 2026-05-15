@@ -6,8 +6,6 @@
 <img width="1281" height="157" alt="Image" src="https://github.com/user-attachments/assets/c4aedc48-0d07-413e-9627-2b104b613222" />
 
 ---
-  
-
 
 <div align="center">
 
@@ -33,6 +31,11 @@
 ---
 ## Getting the project running for the first time
 
+### Prerequisites
+- Node.js v22+
+- PostgreSQL
+- yarn
+
 ### Install dependencies
 
 Backend:
@@ -49,11 +52,17 @@ yarn install
 
 ### Environment variables
 
-Create a `.env` file in `/backend`:
+1) Create a `.env` file in `/backend`:
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/DB_NAME"
 JWT_SECRET="your_secret_key"
+FRONTEND_URL="http://localhost:5173"
 ```
+2) Create a `.env` file in `/frontend`:
+```env
+VITE_API_URL=http://localhost:3000
+```
+
 Make sure to update the values to match your local environment.
 
 ### Database Setup (Prisma)
@@ -64,6 +73,9 @@ cd backend
 
 # Create the database tables
 yarn prisma migrate dev --name init
+
+# (Optional) Seed the database with test users
+yarn prisma db seed
 
 # (Optional) Generate the Prisma Client if not done automatically
 yarn prisma generate
@@ -83,10 +95,17 @@ yarn dev
 ```
 ---
 
-# Programming fundumentals | 9 Lab Implementations 🚀
-
+<img width="1281" height="157" alt="1 (5)" src="https://github.com/user-attachments/assets/9cf81bda-a018-4bd2-87d9-a03d17134d50" />
 
 ## Lab 1. Generators and Iterators · [@X0nexed](https://github.com/X0nexed)
+For example:
+**[backend\src\game\GameState.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/game/GameState.ts#L41-L44)**
+```bash
+            for (const ids of this.playerIds) {
+            const hand = this.deck.splice(0, 7);
+            this.playerHands.set(ids, hand);
+        }
+```
 
 ## Lab 2. Project Setup · [@d4xaris](https://github.com/d4xaris) 
 
@@ -96,7 +115,7 @@ yarn dev
 
 ## Lab 5. Async Array Function Variants · [@Honike-1](https://github.com/Honike-1)
 For example:
-**backend\src\routes\auth.ts**
+**[backend\src\routes\auth.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/routes/auth.ts#L29-L66)**
 ```bash
   app.post(
     "/registration",
@@ -131,15 +150,118 @@ For example:
       });
     },
 ```
-## Lab 6. Large Data Processing with Streams or Async Iterators ·
+## Lab 6. Large Data Processing with Streams or Async Iterators · [@Honike-1](https://github.com/Honike-1) & [@d4xaris](https://github.com/d4xaris) 
+For example:
 
-## Lab 7. Reactive Communication with Observables or EventEmitters ·
+## Lab 7. Reactive Communication with Observables or EventEmitters · [@Honike-1](https://github.com/Honike-1)
+For example:
+**[backend/src/plugins/sockets/controllers.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/plugins/sockets/controllers.ts#L8-L54)**
+```bash
+  @OnSocketEvent("join_room")
+  async handleJoinRoom(socket: Socket, data: any, app: any) {
+    try {
+      const { gameId, nickname, userId } = data;
 
-## Lab 8. Implementing an Authentication Proxy for an API Service · [@Honike-1](https://github.com/Honike-1)
- 
+      socket.join(`${gameId}`);
+      socket.data.nickname = nickname;
+      socket.data.userId = userId;
+      socket.data.gameId = gameId;
+
+      const session = await app.prisma.gameSession.findUnique({
+        where: { id: gameId },
+        include: {
+          _count: {
+            select: {
+              players: true,
+            },
+          },
+          players: true,
+        },
+      });
+
+      if (!session) {
+        return socket.emit("error_message", {
+          code: "NOT_FOUND",
+          message: "Game not found",
+        });
+      }
+
+      app.io.to(`${gameId}`).emit("joined_player", {
+        id: String(userId),
+        nickname: nickname,
+      });
+
+      app.io.emit("lobby_room_updated", {
+        id: String(gameId),
+        playerCount: session._count.players,
+      });
+
+      socket.emit("current_players", session.players);
+    } catch (err) {
+      app.log.error(err);
+      socket.emit("error_message", {
+        message: "An error has occured",
+      });
+    }
+  }
+```
+
+## Lab 8. Implementing an Authentication Proxy for an API Service · [@d4xaris](https://github.com/d4xaris) 
+For example:
+**[frontend/app/hooks/authProxy.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/frontend/app/hooks/authProxy.ts#L99-L120)**
+```bash
+// drop-in fetch replacement — injects auth, retries on 401, rate-limits, logs
+export async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  if (!bucket.consume()) {
+    throw new Error(`Rate limit exceeded (max ${cfg.rateLimitRpm} req/min)`);
+  }
+  const send = () => fetch(url, { ...init, headers: buildHeaders(init.headers) });
+  let res = await send();
+  if (res.status === 401 && cfg.strategy === 'jwt') {
+    const fresh = await refreshToken();
+    if (fresh) res = await send();
+  }
+  ...
+}
+```
+**[frontend/app/hooks/authProxy.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/frontend/app/hooks/authProxy.ts#L55-L67)**, header injection per strategy
+```bash
+function buildHeaders(init?: HeadersInit): Headers {
+  const h = new Headers(init);
+  if (cfg.strategy === 'jwt') {
+    const token = localStorage.getItem('token');
+    if (token) h.set('Authorization', `Bearer ${token}`);
+  } else if (cfg.strategy === 'apiKey' && cfg.apiKey) {
+    h.set('X-Api-Key', cfg.apiKey);
+  }
+  return h;
+}
+```
+**[frontend/app/hooks/useAuth.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/frontend/app/hooks/useAuth.ts#L16-L21)**, proxy configured on app startup
+```bash
+configureProxy({
+  strategy:       'jwt',
+  rateLimitRpm:   60,
+  enableLogging:  true,
+  onTokenExpired: () => setUser(null),
+});
+```
+**[frontend/app/hooks/useGame.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/frontend/app/hooks/useGame.ts#L12-L15)**, всі запити через проксі
+```bash
+const res = await apiFetch("/game/create", {
+  method: "POST",
+  body: JSON.stringify({ sessionName, maxPlayers }),
+});
+```
+**[frontend/app/hooks/useLobby.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/frontend/app/hooks/useLobby.ts#L38-L52)**
+```bash
+const res = await apiFetch("/game/sessions");
+const res = await apiFetch(`/game/${roomId}/join`, { method: "POST" });
+```
+
 ## Lab 9. Implementing a Logging Decorator with Configurable Log Levels · [@Honike-1](https://github.com/Honike-1)
 For example: 
-**backend\src\plugins\prisma.ts**
+**[backend\src\plugins\prisma.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/plugins/prisma.ts#L13-L31)**
 ```bash
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
   const adapter = new PrismaPg(pool);
