@@ -38,13 +38,6 @@ export default async function gameRoutes(app: FastifyInstance) {
 
     const sessionId = String(game.id);
 
-    // app.io.emit("room_created", {
-    //   roomId: sessionId,
-    //   roomName: game.sessionName,
-    //   playerCount: 1,
-    //   maxPlayers: maxPlayers,
-    // });
-
     reply.status(201).send({
       success: true,
       message: "Game created",

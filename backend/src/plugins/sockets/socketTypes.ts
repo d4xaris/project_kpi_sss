@@ -1,3 +1,5 @@
+import type { Card } from "../../game/shared.js";
+
 export interface ClientToServer {
   join_room: (data: {
     gameId: number;
@@ -10,6 +12,7 @@ export interface ClientToServer {
     userId: number;
   }) => void;
   game_start_request: (data: { gameId: number }) => void;
+  play_card: (data: { gameId: number; userId: number; card: Card }) => void;
 }
 
 export interface ServerToClient {
@@ -32,6 +35,13 @@ export interface ServerToClient {
   }) => void;
   lobby_room_removed: (data: { id: string }) => void;
   lobby_room_updated: (data: { id: string; playerCount: number }) => void;
+  card_played: (data: {
+    playerId: number;
+    card: Card;
+    topCard: Card;
+    currentPlayerIndex: number;
+    direction: 1 | -1;
+  }) => void;
 }
 
 export interface SocketData {

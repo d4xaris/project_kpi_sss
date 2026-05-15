@@ -1,6 +1,7 @@
 import { OnSocketEvent } from "./socket.decorator.js";
 import { Deck } from "../../game/Deck.js";
 import { GameState } from "../../game/GameState.js";
+import type { Card } from "../../game/shared.js";
 import { Socket } from "socket.io";
 
 export class GameController {
@@ -98,6 +99,8 @@ export class GameController {
     }
   }
 
+  private gameStates = new Map<number, GameState>();
+
   @OnSocketEvent("game_start_request")
   async handleGameStart(socket: Socket, data: any, app: any) {
     const { gameId } = data;
@@ -115,18 +118,65 @@ export class GameController {
         });
       }
 
-      const playersIds = session.players.map((p: { id: any }) => p.id);
+      const deck = new Deck();
+      deck.shuffle();
 
-      // const room = new Game
-      const gameSettings = {};
+      const playersIds = session.players.map((p: { id: any }) => p.id);
+      const gameState = new GameState(playersIds, deck.getCards());
+
+      this.gameStates.set(gameId, gameState);
 
       app.io.to(`${gameId}`).emit("game_start_settings", {
         players: playersIds,
-        status: "Playing",
-        gameSettings: gameSettings,
+        status: "PLAYING",
+        gameSettings: {
+          topCard: gameState.topCard,
+          currentPlayerIndex: gameState.currentPlayerIndex,
+          direction: gameState.direction,
+        },
       });
     } catch (err) {
       app.log.error(err);
+      socket.emit("error_message", {
+        message: "Failed to start the game",
+      });
+    }
+  }
+
+  @OnSocketEvent("play_card")
+  async handlePlayCard(socket: Socket, data: any, app: any) {
+    const { gameId, userId, card } = data;
+
+    try {
+      const gameState = this.gameStates.get(gameId);
+      if (!gameState) {
+        return socket.emit("error_message", {
+          code: "NOT_FOUND",
+          message: "Game not found",
+        });
+      }
+
+      const res = gameState.playCard(userId, card);
+
+      if (!res.success) {
+        return socket.emit("error_message", {
+          code: res.reason,
+          message: res.reason,
+        });
+      }
+
+      app.io.to(`${gameId}`).emit("card_played", {
+        playerId: userId,
+        card,
+        topCard: gameState.topCard,
+        currentPlayerIndex: gameState.currentPlayerIndex,
+        direction: gameState.direction,
+      });
+    } catch (err) {
+      app.log.error(err);
+      socket.emit("error_message", {
+        message: "Failed to start the game",
+      });
     }
   }
 }
