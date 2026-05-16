@@ -661,7 +661,6 @@ span {
 }
 
 .game-deck--active:hover {
-  filter: brightness(1.15) drop-shadow(0 0 10px rgba(255,255,255,0.5));
   transform: translateY(-50%) scale(1.05);
 }
 
@@ -863,16 +862,16 @@ span {
   animation: dealCardLeft 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 @keyframes dealCardLeft {
-  from { opacity: 0; transform: translateY(50px) rotate(-14deg); }
+  from { opacity: 0; transform: translateY(50px) rotate(0deg); }
   to   { opacity: 1; transform: translateY(0)    rotate(0deg); }
 }
 
-/* Right: slides in with a clockwise flip — mirror of left */
+/* Right: slides*/
 .opponent-hand--right .opponent-card {
   animation: dealCardRight 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 @keyframes dealCardRight {
-  from { opacity: 0; transform: translateY(50px) rotate(14deg); }
+  from { opacity: 0; transform: translateY(50px) rotate(0deg); }
   to   { opacity: 1; transform: translateY(0)    rotate(0deg); }
 }
 
@@ -885,26 +884,14 @@ span {
 
 .opponent-hand--left {
   top: 50%;
-  left: 20px;
-  transform: translateY(-50%) rotate(-90deg);
-  transition: transform 0.3s ease, filter 0.3s ease;
-}
-
-.opponent-hand--left.opponent-hand--lr-active {
-  transform: translateY(-50%) translateX(22px) rotate(-90deg);
-  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.65));
+  left: 80px;
+  transform: translateX(-50%) translateY(-50%) rotate(-90deg);
 }
 
 .opponent-hand--right {
   top: 50%;
-  right: 20px;
-  transform: translateY(-50%) rotate(90deg);
-  transition: transform 0.3s ease, filter 0.3s ease;
-}
-
-.opponent-hand--right.opponent-hand--lr-active {
-  transform: translateY(-50%) translateX(-22px) rotate(90deg);
-  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.65));
+  right: 80px;
+  transform: translateX(50%) translateY(-50%) rotate(90deg);
 }
 
 /* ── Opponent name labels ── */
@@ -932,20 +919,38 @@ span {
   text-align: center;
 }
 
-/* left-aligned, starts after the left hand's visual right edge (~237px) */
+/* just right of the left hand's visible edge (center 80px + ~58px half-width + 16px gap) */
 .opponent-name--left {
   top: 50%;
-  left: 250px;
+  left: 155px;
   transform: translateY(-50%);
   text-align: left;
 }
 
-/* right-aligned, ends before the right hand's visual left edge (~237px from right) */
+/* just left of the right hand's visible edge */
 .opponent-name--right {
   top: 50%;
-  right: 250px;
+  right: 155px;
   transform: translateY(-50%);
   text-align: right;
+}
+
+/* ── Active wild color label ── */
+.wild-color-label {
+  position: fixed;
+  top: 62%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1.15rem;
+  color: #fff;
+  padding: 6px 20px;
+  border-radius: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  animation: fadeIn 0.3s ease both;
+  z-index: 10;
 }
 
 /* ── Wild card colour picker ── */
@@ -1052,7 +1057,7 @@ span {
 /* Crisp expanding ring — centered via margin, no translate in keyframes */
 .solo-flash {
   position: absolute;
-  top: 42%;
+  top: 52%;
   left: 50%;
   width: 200px;
   height: 200px;
@@ -1090,7 +1095,7 @@ span {
 /* Colored sparkle particles — centered via margin so rotate() pivots from exact screen center */
 .solo-particle {
   position: absolute;
-  top: 42%;
+  top: 52%;
   left: 50%;
   width: var(--size);
   height: var(--size);
@@ -1119,7 +1124,7 @@ span {
 
 .solo-confetti-particle {
   position: absolute;
-  top: 42%;
+  top: 52%;
   left: 50%;
   width: var(--size);
   height: var(--size);
@@ -1140,7 +1145,7 @@ span {
 /* ── SOLO splash ── */
 .solo-splash {
   position: fixed;
-  top: 42%;
+  top: 46%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 600px;
@@ -1255,7 +1260,7 @@ span {
 
 .catch-effect__ring {
   position: absolute;
-  top: 42%;
+  top: 52%;
   left: 50%;
   width: 180px;
   height: 180px;
@@ -1285,7 +1290,7 @@ span {
 
 .catch-effect__splash {
   position: fixed;
-  top: 42%;
+  top: 46%;
   left: 50%;
   width: 600px;
   pointer-events: none;

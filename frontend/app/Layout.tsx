@@ -73,7 +73,6 @@ function YouTubePlayer() {
           onReady: (e: any) => {
             ready.current = true;
             if (isGameRef.current) {
-              // On game page: load silently, unmute after start sound finishes
               e.target.setVolume(0);
               e.target.unMute();
               e.target.loadVideoById(GAME_VIDEO_ID);
@@ -87,7 +86,6 @@ function YouTubePlayer() {
               e.target.setVolume(0);
               e.target.setLoop(true);
               e.target.playVideo();
-              // If user already clicked before player was ready, unmute now
               if (hasClicked.current) unmute(e.target);
             }
           },
@@ -112,7 +110,6 @@ function YouTubePlayer() {
     }
   }, []);
 
-  // First click: unmute. If player not ready yet, flag it so onReady handles it.
   useEffect(() => {
     const onClick = () => {
       hasClicked.current = true;
@@ -122,22 +119,18 @@ function YouTubePlayer() {
     return () => document.removeEventListener('click', onClick);
   }, []);
 
-  // Route changes: game song on /game, playlist everywhere else
   useEffect(() => {
     if (!ready.current) return;
 
-    // Clear any pending delayed unmute from a previous game entry
     if (musicDelayId.current) {
       clearTimeout(musicDelayId.current);
       musicDelayId.current = null;
     }
 
     if (isGame) {
-      // Load immediately but stay silent — let the start sound effect finish first
       player.current.setVolume(0);
       player.current.unMute();
       player.current.loadVideoById(GAME_VIDEO_ID);
-      // Unmute after 3.5 s (start sound + curtain animation finish)
       musicDelayId.current = setTimeout(() => {
         if (isGameRef.current) player.current.setVolume(vol());
         musicDelayId.current = null;
@@ -149,7 +142,6 @@ function YouTubePlayer() {
     }
   }, [isGame]);
 
-  // Volume slider in Settings
   useEffect(() => {
     const onVol = (e: Event) => player.current?.setVolume((e as CustomEvent).detail * 100);
     window.addEventListener('sss:musicVolume', onVol);

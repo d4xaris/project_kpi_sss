@@ -20,7 +20,6 @@ export function useCatch(
   const effectTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevRef      = useRef({ ...oppCounts });
 
-  // Open a 3-second catch window whenever an opponent drops to exactly 1 card
   useEffect(() => {
     const prev = prevRef.current;
     (['top', 'left', 'right'] as const).forEach(slot => {
@@ -33,7 +32,6 @@ export function useCatch(
     prevRef.current = { ...oppCounts };
   }, [oppCounts]);
 
-  // Cleanup timers on unmount
   useEffect(() => () => {
     if (timerRef.current)    clearTimeout(timerRef.current);
     if (effectTimer.current) clearTimeout(effectTimer.current);
@@ -48,8 +46,6 @@ export function useCatch(
     if (effectTimer.current) clearTimeout(effectTimer.current);
     effectTimer.current = setTimeout(() => setShowCatchEffect(false), 1300);
 
-    // HONIKE: socket.emit('game:catch', { slot })
-    //         server adds +2 cards to that player and broadcasts 'game:draw' → { target: slot, count: 2 }
     onCatch(slot);
   };
 

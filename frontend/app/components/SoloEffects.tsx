@@ -10,7 +10,6 @@ export default function SoloEffects({ showEffects, showSplash }: SoloEffectsProp
         <div className="solo-effects" aria-hidden>
           <div className="solo-flash" />
 
-          {/* White confetti behind everything */}
           <div className="solo-confetti">
             {Array.from({ length: 50 }).map((_, i) => (
               <div
@@ -27,7 +26,6 @@ export default function SoloEffects({ showEffects, showSplash }: SoloEffectsProp
             ))}
           </div>
 
-          {/* Colored sparkles on top */}
           {Array.from({ length: 80 }).map((_, i) => (
             <div
               key={i}

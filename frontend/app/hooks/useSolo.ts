@@ -25,16 +25,11 @@ export function useSolo(handLength: number): UseSoloReturn {
     if (soloCalled) return;
     setSoloCalled(true);
     triggerSolo();
-    // HONIKE: socket.emit('game:solo')
-    //         server broadcasts 'game:solo' → { playerId } to all players in the room
-    //         replace the localStorage block below with: socket.on('game:solo', () => triggerSolo())
-    // MOCK: localStorage broadcast (remove when sockets are wired)
     const key = 'sss:solo';
     localStorage.setItem(key, Date.now().toString());
     window.dispatchEvent(new StorageEvent('storage', { key, newValue: Date.now().toString() }));
   };
 
-  // HONIKE: remove this effect and replace with socket.on('game:solo', () => triggerSolo())
   useEffect(() => {
     const handler = (e: StorageEvent) => {
       if (e.key === 'sss:solo') triggerSolo();
@@ -43,7 +38,6 @@ export function useSolo(handLength: number): UseSoloReturn {
     return () => window.removeEventListener('storage', handler);
   }, []);
 
-  // Reset soloCalled when hand goes back above 1 card
   useEffect(() => {
     if (handLength !== 1) setSoloCalled(false);
   }, [handLength]);

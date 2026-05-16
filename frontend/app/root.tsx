@@ -1,7 +1,24 @@
+import { useEffect } from "react";
 import { Outlet, Scripts, Links, isRouteErrorResponse, useRouteError, useNavigate } from "react-router";
 import "./app.css";
 
 export default function Root() {
+  useEffect(() => {
+    const warm = () => {
+      const a = new Audio('/sounds/click.mp3');
+      a.volume = 0;
+      a.play().catch(() => {});
+      document.removeEventListener('click', warm, true);
+      document.removeEventListener('touchstart', warm, true);
+    };
+    document.addEventListener('click', warm, true);
+    document.addEventListener('touchstart', warm, true);
+    return () => {
+      document.removeEventListener('click', warm, true);
+      document.removeEventListener('touchstart', warm, true);
+    };
+  }, []);
+
   return (
     <html>
       <head>

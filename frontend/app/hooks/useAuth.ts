@@ -12,17 +12,12 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Configure the auth proxy once on mount
     configureProxy({
       strategy:      'jwt',
       rateLimitRpm:  60,
       enableLogging: true,
       onTokenExpired: () => setUser(null),
     });
-
-    // Анкомент - то для бета тесту акк
-    //setUser({ id: 1, nickname: "TestUser67" });
-    //setIsLoading(false);
 
     const token = localStorage.getItem("token");
     const savedUser = localStorage.getItem("user");
@@ -94,5 +89,4 @@ export function useAuth() {
   };
 }
 
-// Re-export proxy utilities so callers only need one import
 export { apiFetch, configureProxy, withStrategy, getRequestLog } from "~/hooks/authProxy";

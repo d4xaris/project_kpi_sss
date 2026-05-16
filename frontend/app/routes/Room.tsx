@@ -45,19 +45,6 @@ export default function Room() {
     if (user) setPlayers([{ id: user.id, nickname: user.nickname }]);
   }, [user]);
 
-  // HONIKE: replace this entire effect with a socket connection + event listeners.
-  //
-  //   const socket = connectToRoom(id, token);   ← token from localStorage.getItem('token')
-  //
-  //   socket.on('room:state',   ({ players })  => setPlayers(players));
-  //   socket.on('player:join',  (player)       => setPlayers(prev => [...prev, player]));
-  //   socket.on('player:leave', ({ playerId }) => setPlayers(prev => prev.filter(p => p.id !== playerId)));
-  //   socket.on('game:start',   ()             => navigate('/game', { state: { fromRoom: true } }));
-  //   socket.on('room:closed',  ()             => navigate('/lobby'));
-  //
-  //   return () => socket.disconnect();
-  //
-  // MOCK: localStorage signals (remove when sockets are wired)
   useEffect(() => {
     if (isHost) return;
     const onStorage = (e: StorageEvent) => {
@@ -71,19 +58,18 @@ export default function Room() {
   }, [id, isHost]);
 
   const handleLeave = async () => {
-    // HONIKE: socket.emit('room:leave', { roomId: id }), then disconnect socket
     await leaveRoom(Number(id), isHost);
     navigate("/lobby");
   };
 
   const handleStart = async () => {
     sounds.gameStart();
-    // HONIKE: socket.emit('game:start', { roomId: id })
-    //         server validates sender is host, then broadcasts 'game:start' to all players in room
     const ok = await startGame(Number(id));
     if (!ok) return;
     setClosing(true);
-    setTimeout(() => navigate("/game", { state: { fromRoom: true, playerCount: players.length } }), 750);
+    // sessionId will come from game:start socket event once sockets are wired;
+    // Number(id) is a placeholder so the prop threads through for now.
+    setTimeout(() => navigate("/game", { state: { fromRoom: true, playerCount: players.length, sessionId: Number(id) } }), 750);
   };
 
   return (
