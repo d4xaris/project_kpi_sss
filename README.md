@@ -152,7 +152,54 @@ For example:
 ```
 ## Lab 6. Large Data Processing with Streams or Async Iterators · [@Honike-1](https://github.com/Honike-1) & [@d4xaris](https://github.com/d4xaris) 
 For example:
+**[backend/src/game/logger/logger.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/game/logger/logger.tss#L18-L62)**
+```bash
+export class GameLogger {
+  private formatter: LogFormatter;
+  private fileStream: Writable;
+  private gameId: number;
 
+  constructor(gameId: number) {
+    this.gameId = gameId;
+
+    const logsDir = path.resolve("logs");
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir, { recursive: true });
+    }
+
+    this.formatter = new LogFormatter();
+
+    this.fileStream = fs.createWriteStream(
+      path.join(logsDir, `game-${gameId}.log`),
+      { flags: "a" },
+    );
+
+    this.formatter.pipe(this.fileStream);
+  }
+
+  log(player: string | number, action: LogAction, message: string) {
+    const entry: LogEntry = {
+      timestamp: new Date().toISOString(),
+      player: String(player),
+      action,
+      message,
+    };
+
+    this.formatter.write(entry);
+  }
+
+  system(action: LogAction, message: string) {
+    this.log("SYSTEM", action, message);
+  }
+
+  close() {
+    this.system("GAME_FINISHED", "Game finished. Closing log stream.");
+    this.formatter.end(() => {
+      this.fileStream.end();
+    });
+  }
+}
+```
 ## Lab 7. Reactive Communication with Observables or EventEmitters · [@Honike-1](https://github.com/Honike-1)
 For example:
 **[backend/src/plugins/sockets/controllers.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/plugins/sockets/controllers.ts#L8-L54)**
