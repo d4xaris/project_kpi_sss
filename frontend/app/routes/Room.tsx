@@ -8,6 +8,9 @@ import { sounds } from "~/sounds";
 interface Player        { id: number; nickname: string }
 interface LocationState { roomName?: string; hostId?: number; maxPlayers?: number }
 
+// Flip to false once the real backend is running
+const IS_MOCK = true;
+
 const Crown = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M2 19H22V21H2V19ZM2 17L5 8L9 13L12 5L15 13L19 8L22 17H2Z" fill="#FFD700"/>
@@ -21,32 +24,27 @@ export default function Room() {
   const { user }                 = useAuth();
   const { startGame, leaveRoom } = useGame();
 
-  const { roomName = "Room", hostId = user?.id } = (state as LocationState) ?? {};
+  const { roomName = "Room", hostId = user?.id, maxPlayers = 4 } = (state as LocationState) ?? {};
   const isHost = user?.id === hostId;
 
   const [players, setPlayers] = useState<Player[]>([]);
   const [closing, setClosing] = useState(false);
 
-  const canStart = players.length >= 2;
+  const canStart   = players.length >= 2;
+  const roomIsFull = players.length >= maxPlayers;
+
+  // MOCK ONLY: add a fake player so the host can test the start flow
+  const handleMockJoin = () => {
+    const mockNames = ['CoolPlayer123', 'LeftHandedKing', 'xX_UnoMaster_Xx'];
+    const next = mockNames[players.length - 1] ?? `Player ${players.length + 1}`;
+    setPlayers(prev => [...prev, { id: prev.length + 100, nickname: next }]);
+  };
 
   // Seed the local player on mount
   useEffect(() => {
     if (user) setPlayers([{ id: user.id, nickname: user.nickname }]);
   }, [user]);
 
-  // HONIKE: replace this entire effect with a socket connection + event listeners.
-  //
-  //   const socket = connectToRoom(id, token);   ← token from localStorage.getItem('token')
-  //
-  //   socket.on('room:state',   ({ players })  => setPlayers(players));
-  //   socket.on('player:join',  (player)       => setPlayers(prev => [...prev, player]));
-  //   socket.on('player:leave', ({ playerId }) => setPlayers(prev => prev.filter(p => p.id !== playerId)));
-  //   socket.on('game:start',   ()             => navigate('/game', { state: { fromRoom: true } }));
-  //   socket.on('room:closed',  ()             => navigate('/lobby'));
-  //
-  //   return () => socket.disconnect();
-  //
-  // MOCK: localStorage signals (remove when sockets are wired)
   useEffect(() => {
     if (isHost) return;
     const onStorage = (e: StorageEvent) => {
@@ -60,19 +58,18 @@ export default function Room() {
   }, [id, isHost]);
 
   const handleLeave = async () => {
-    // HONIKE: socket.emit('room:leave', { roomId: id }), then disconnect socket
     await leaveRoom(Number(id), isHost);
     navigate("/lobby");
   };
 
   const handleStart = async () => {
     sounds.gameStart();
-    // HONIKE: socket.emit('game:start', { roomId: id })
-    //         server validates sender is host, then broadcasts 'game:start' to all players in room
     const ok = await startGame(Number(id));
     if (!ok) return;
     setClosing(true);
-    setTimeout(() => navigate("/game", { state: { fromRoom: true } }), 750);
+    // sessionId will come from game:start socket event once sockets are wired;
+    // Number(id) is a placeholder so the prop threads through for now.
+    setTimeout(() => navigate("/game", { state: { fromRoom: true, playerCount: players.length, sessionId: Number(id) } }), 750);
   };
 
   return (
@@ -95,6 +92,16 @@ export default function Room() {
         {!isHost && (
           <p style={{ textAlign: "center", opacity: 0.6, marginTop: "12px", fontSize: "0.9rem" }}>
             Waiting for host to start...
+          </p>
+        )}
+
+        {/* DEV ONLY — remove when sockets are wired */}
+        {IS_MOCK && isHost && !roomIsFull && (
+          <p
+            onClick={handleMockJoin}
+            style={{ textAlign: "center", opacity: 0.45, marginTop: "8px", fontSize: "0.8rem", cursor: "pointer", userSelect: "none" }}
+          >
+            + simulate player join ({players.length}/{maxPlayers})
           </p>
         )}
 

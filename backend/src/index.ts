@@ -54,9 +54,6 @@ app.register(authRoutes, {
   },
 });
 
-// routes
-// socket
-
 app.get("/", async () => {
   return { message: "Hello World!" };
 });

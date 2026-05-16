@@ -8,7 +8,7 @@ export class GameState {
     private playerIds: number[];
     private playerHands: Map<number, Card[]>;
     direction = 1 | -1;
-    private discard_deck= [];
+    private discard_deck: Card[] = [];
     currentPlayerIndex = 0;
     private drawBuffer = 0;
     topCard: Card;
@@ -51,17 +51,25 @@ export class GameState {
     // }
     // }
      public playCard(playerIds: number,card: Card):ActionResult {
-        if (playerIds !== this.currentPlayerIndex) {
-            return { success: false, reason: 'NOT_YOUR_TURN' };
-        }
-        let hand = this.playerHands.get(playerIds);
+         const activePlayerId = this.playerIds[this.currentPlayerIndex];
+         if (playerIds !== activePlayerId) {
+             return {success: false, reason: 'NOT_YOUR_TURN'};
+         }//first check
+        const hand = this.playerHands.get(playerIds);
          if (!hand) {
                 return { success: false, reason: 'PLAYER_NOT_FOUND' };
+         }//second check
+         const cardIndex = hand.findIndex(c => c.color === card.color && c.value === card.value);
+         if (cardIndex === -1) {
+             return { success: false, reason: 'CARD_NOT_IN_HAND' };
          }
-         return {success: true };
          if (!canPlayCards(card, this.topCard)) {
-             return { success: false, reason: 'INVALID_CARD' };
+             return {success: false, reason: 'INVALID_CARD'};
          }
-         
+         hand.splice(cardIndex, 1);
+         this.discard_deck.push(this.topCard);
+         this.topCard = card;
+
+         return {success: true};
      }
 }

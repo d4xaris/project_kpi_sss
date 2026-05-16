@@ -57,7 +57,8 @@ function YouTubePlayer() {
   const isGame = location.pathname.startsWith("/game");
   isGameRef.current = isGame;
 
-  const hasClicked = useRef(false);
+  const hasClicked   = useRef(false);
+  const musicDelayId = useRef<ReturnType<typeof setTimeout> | null>(null);
   const vol = () => parseFloat(localStorage.getItem('musicVolume') ?? '0.3') * 100;
 
   const unmute = (p: any) => { p.unMute(); p.setVolume(vol()); };
@@ -72,14 +73,21 @@ function YouTubePlayer() {
           onReady: (e: any) => {
             ready.current = true;
             if (isGameRef.current) {
+              e.target.setVolume(0);
+              e.target.unMute();
               e.target.loadVideoById(GAME_VIDEO_ID);
+              if (hasClicked.current) {
+                musicDelayId.current = setTimeout(() => {
+                  if (isGameRef.current) e.target.setVolume(vol());
+                  musicDelayId.current = null;
+                }, 3500);
+              }
             } else {
               e.target.setVolume(0);
               e.target.setLoop(true);
               e.target.playVideo();
+              if (hasClicked.current) unmute(e.target);
             }
-            // If user already clicked before player was ready, unmute now
-            if (hasClicked.current) unmute(e.target);
           },
           onStateChange: (e: any) => {
             if (e.data === (window as any).YT.PlayerState.ENDED && isGameRef.current) {
@@ -102,7 +110,6 @@ function YouTubePlayer() {
     }
   }, []);
 
-  // First click: unmute. If player not ready yet, flag it so onReady handles it.
   useEffect(() => {
     const onClick = () => {
       hasClicked.current = true;
@@ -112,13 +119,22 @@ function YouTubePlayer() {
     return () => document.removeEventListener('click', onClick);
   }, []);
 
-  // Route changes: game song on /game, playlist everywhere else
   useEffect(() => {
     if (!ready.current) return;
+
+    if (musicDelayId.current) {
+      clearTimeout(musicDelayId.current);
+      musicDelayId.current = null;
+    }
+
     if (isGame) {
+      player.current.setVolume(0);
       player.current.unMute();
-      player.current.setVolume(vol());
       player.current.loadVideoById(GAME_VIDEO_ID);
+      musicDelayId.current = setTimeout(() => {
+        if (isGameRef.current) player.current.setVolume(vol());
+        musicDelayId.current = null;
+      }, 3500);
     } else {
       player.current.loadPlaylist({ listType: 'playlist', list: PLAYLIST_ID });
       player.current.setLoop(true);
@@ -126,7 +142,6 @@ function YouTubePlayer() {
     }
   }, [isGame]);
 
-  // Volume slider in Settings
   useEffect(() => {
     const onVol = (e: Event) => player.current?.setVolume((e as CustomEvent).detail * 100);
     window.addEventListener('sss:musicVolume', onVol);

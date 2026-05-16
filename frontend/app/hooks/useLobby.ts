@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { authHeaders } from "./useAuth";
+import { apiFetch } from "./useAuth";
 
-// Set to false once the real backend is running.
 const USE_MOCK = true;
 
 export interface RoomSummary {
@@ -22,12 +21,6 @@ export function useLobby() {
   const [rooms, setRooms]     = useState<RoomSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // GET /game/sessions → { rooms: RoomSummary[] }
-  // HONIKE: the list is currently fetched once on mount + manually via the Refresh button.
-  //         Once sockets are wired, consider subscribing to a 'lobby:update' event instead
-  //         so the room list stays live without manual refreshes:
-  //
-  //   socket.on('lobby:update', (rooms: RoomSummary[]) => setRooms(rooms));
   const fetchRooms = async () => {
     setLoading(true);
     if (USE_MOCK) {
@@ -35,7 +28,7 @@ export function useLobby() {
       setLoading(false);
       return;
     }
-    const res  = await fetch("/game/sessions", { headers: authHeaders() });
+    const res  = await apiFetch("/game/sessions");
     const data = await res.json();
     if (res.ok) setRooms(data.rooms.filter((r: RoomSummary) => r.playerCount > 0));
     setLoading(false);
@@ -43,16 +36,9 @@ export function useLobby() {
 
   useEffect(() => { fetchRooms(); }, []);
 
-  // POST /game/:id/join
-  // HONIKE: after this REST call resolves, connect the room socket:
-  //   connectToRoom(roomId, token)
-  //   so the player starts receiving room events ('room:state', 'player:join', etc.)
   const joinRoom = async (roomId: number): Promise<boolean> => {
     if (USE_MOCK) return true;
-    const res = await fetch(`/game/${roomId}/join`, {
-      method: "POST",
-      headers: authHeaders(),
-    });
+    const res = await apiFetch(`/game/${roomId}/join`, { method: "POST" });
     return res.ok;
   };
 

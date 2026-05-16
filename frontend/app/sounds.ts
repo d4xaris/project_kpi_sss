@@ -12,4 +12,5 @@ export const sounds = {
   gameStart: () => play('gamestart'),
   start:     () => play('start'),
   solo:      () => play('solosound', 2),
+  catch:     () => play('catchsound', 1.5),
 };
