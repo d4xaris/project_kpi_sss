@@ -97,6 +97,13 @@ export default fp(async (app) => {
           app.log.info(
             `User ${nickname} (ID: ${userId}) automatically removed from room ${gameId}`,
           );
+
+          const logger = gameController.getLogger(gameId);
+          logger?.log(
+            userId,
+            "PLAYER_LEFT",
+            `Player ${nickname} disconnected from game ${gameId}.`,
+          );
         } catch (err) {
           app.log.error(
             `Failed to handle disconnect for user ${userId}: ${err}`,
