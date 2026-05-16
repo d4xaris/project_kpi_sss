@@ -13,6 +13,10 @@ export interface ClientToServer {
   }) => void;
   game_start_request: (data: { gameId: number }) => void;
   play_card: (data: { gameId: number; userId: number; card: Card }) => void;
+  draw_card: (data: {}) => void;
+  choose_color: (data: {}) => void;
+  say_solo: (data: {}) => void;
+  catch_solo: (data: {}) => void;
 }
 
 export interface ServerToClient {
@@ -42,6 +46,15 @@ export interface ServerToClient {
     currentPlayerIndex: number;
     direction: 1 | -1;
   }) => void;
+  player_hand: (data: { cards: Card[] }) => void;
+  game_state: (data: {}) => void;
+  cards_drawn: (data: {}) => void;
+  player_drew: (data: {}) => void;
+  color_chosen: (data: {}) => void;
+  choose_color_prompt: (data: {}) => void;
+  turn_skipped: (data: {}) => void;
+  solo_called: (data: {}) => void;
+  solo_catch_result: (data: {}) => void;
 }
 
 export interface SocketData {
