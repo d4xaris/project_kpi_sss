@@ -6,6 +6,7 @@ import { useAuth, apiFetch } from '~/hooks/useAuth';
 import ColorPicker, { type CardColor } from '~/components/ColorPicker';
 import OpponentLayout from '~/components/OpponentLayout';
 import WinScreen from '~/components/WinScreen';
+import TrollScreen from '~/components/TrollScreen';
 import SoloEffects from '~/components/SoloEffects';
 import CatchEffect from '~/components/CatchEffect';
 import FlyingCard from '~/components/FlyingCard';
@@ -26,11 +27,15 @@ const OPPONENT_ORDER: Record<number, Record<1 | -1, Slot[]>> = {
 
 const DRAW_COLORS = ['crimson', 'purple', 'yellow', 'orange'] as const;
 const DRAW_VALS   = ['1','2','3','4','5','6','7','8','9'] as const;
-const randomCard  = (): HandCard => ({
-  color: DRAW_COLORS[Math.floor(Math.random() * DRAW_COLORS.length)],
-  value: DRAW_VALS  [Math.floor(Math.random() * DRAW_VALS.length)],
-  uid:   mkUid(),
-});
+const randomCard  = (): HandCard => {
+  // ~2% chance of drawing the legendary troll card in mock mode
+  if (Math.random() < 0.02) return { color: 'wild', value: 'troll', uid: mkUid() };
+  return {
+    color: DRAW_COLORS[Math.floor(Math.random() * DRAW_COLORS.length)],
+    value: DRAW_VALS  [Math.floor(Math.random() * DRAW_VALS.length)],
+    uid:   mkUid(),
+  };
+};
 
 const isPlayable = (card: Card, top: Card, wildColor: CardColor | null): boolean => {
   if (card.color === 'wild') return true;
@@ -53,6 +58,7 @@ export default function Game() {
 // State
   const [phase,           setPhase]           = useState<Phase>(fromRoom ? 'closed' : 'closing');
   const [winner,          setWinner]          = useState<string | null>(null);
+  const [showTroll,       setShowTroll]       = useState(false);
   const [winExiting,      setWinExiting]      = useState(false);
   const [hand,            setHand]            = useState<HandCard[]>(() => MOCK_HAND.map(c => ({ ...c, uid: mkUid() })));
   const [topCard,         setTopCard]         = useState(MOCK_TOP_CARD);
@@ -156,6 +162,17 @@ export default function Game() {
 
   const handleCardClick = (card: Card, index: number) => {
     if (currentTurn !== 'player') return;
+
+    // ── Troll card: everyone loses, video plays, no way back except reload/wait ──
+    if (card.value === 'troll') {
+      turnTimers.current.forEach(clearTimeout);
+      turnTimers.current = [];
+      setHand(prev => prev.filter((_, i) => i !== index));
+      setWinner('__troll__'); // unblocks useBlocker so navigate('/') works inside TrollScreen
+      setShowTroll(true);
+      return;
+    }
+
     setHand(prev => prev.filter((_, i) => i !== index));
     setTopCard(card);
     setActiveWildColor(null);
@@ -246,9 +263,11 @@ export default function Game() {
 
       {showColorPicker && <ColorPicker onPick={handleColorPick} />}
 
-      {winner !== null && (
+      {winner !== null && winner !== '__troll__' && (
         <WinScreen nickname={winner} onHome={handleGoHome} exiting={winExiting} />
       )}
+
+      {showTroll && <TrollScreen />}
 
       {winExiting && <GameCurtain phase="closing" exit />}
     </div>

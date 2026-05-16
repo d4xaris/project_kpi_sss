@@ -7,6 +7,7 @@ export const MOCK_HAND = [
   { color: 'wild', value: 'wild' },
   { color: 'wild', value: 'wild_draw4' },
   { color: 'crimson', value: 'reverse' },
+  { color: 'wild',    value: 'troll'   },
 ];
 
 export const MOCK_OPPONENTS = {
