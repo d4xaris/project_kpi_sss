@@ -261,27 +261,44 @@ const res = await apiFetch(`/game/${roomId}/join`, { method: "POST" });
 
 ## Lab 9. Implementing a Logging Decorator with Configurable Log Levels · [@Honike-1](https://github.com/Honike-1)
 For example: 
-**[backend\src\plugins\prisma.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/plugins/prisma.ts#L13-L31)**
+**[backend/src/plugins/sockets/socket.decorator.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/plugins/sockets/socket.decorator.ts#L1-L9)**
 ```bash
-  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
-  const adapter = new PrismaPg(pool);
-  const prisma = new PrismaClient({ adapter });
+import "reflect-metadata";
 
-  try {
-    await prisma.$connect();
+export const SOCKET_EVENT_METADATA = "socket_event_metadata";
 
-    app.log.info("Database connected successfully");
-  } catch (error) {
-    app.log.info("Failed to connect to database during startup");
+export function OnSocketEvent(event: string) {
+  return (target: any, propertyKey: string) => {
+    Reflect.defineMetadata(SOCKET_EVENT_METADATA, event, target, propertyKey);
+  };
+}
+```
+**[backend/src/plugins/sockets/handler.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/plugins/sockets/handler.ts#L4-L27)**
+```bash
+export function registerSocketHandlers(
+  socket: any,
+  app: any,
+  controllers: any[],
+) {
+  controllers.forEach((controller) => {
+    const prototype = Object.getPrototypeOf(controller);
+    const methods = Object.getOwnPropertyNames(prototype);
 
-    process.exit(1);
-  }
+    methods.forEach((methodName) => {
+      const event = Reflect.getMetadata(
+        SOCKET_EVENT_METADATA,
+        prototype,
+        methodName,
+      );
 
-  app.decorate("prisma", prisma);
-
-  app.addHook("onClose", async (server) => {
-    await server.prisma.$disconnect();
+      if (event) {
+        socket.on(event, (data: any) => {
+          controller[methodName](socket, data, app);
+        });
+      }
+    });
   });
+}
 ```
 ---
 <img width="1281" height="157" alt="1 (2)" src="https://github.com/user-attachments/assets/3301452f-e1eb-473e-a06f-34407f59d813" />
