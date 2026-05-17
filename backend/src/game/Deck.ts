@@ -9,10 +9,11 @@ export class Deck {
 
     constructor() {
         const colors: CardColor[] = ['crimson', 'yellow', 'orange', 'purple'];
-        const values: CardValue[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'reverse', 'drawtwo'];
+        const values: CardValue[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'reverse', 'drawtwo',];
         const zero: CardValue = '0'; // нулей только 4
-        this.cards.push({ color: 'wild', value: 'troll' });
-
+        if(Math.random() < 0.05){
+            this.cards.push({ color: 'wild', value: 'troll' });
+       }
         for (let i = 0; i < 4; i++) {
             this.cards.push({ color: 'wild', value: 'wild_draw4' }); // генерация 4 черных карт первого вида
         }
@@ -53,10 +54,10 @@ export class Deck {
         return this.cards.splice(0, actualCount);
     }
 }
-//const myDeck = new Deck();
-//myDeck.shuffle();
-// const discard = myDeck.getCards().splice(0, 100);
-// const drawCards = myDeck.draw(5);
-// console.table(discard);
-// console.log(myDeck);
-// console.log(drawCards);
+const myDeck = new Deck();
+myDeck.shuffle();
+const discard = myDeck.getCards().splice(0, 100);
+const drawCards = myDeck.draw(5);
+console.table(discard);
+console.log(myDeck);
+console.log(drawCards);

@@ -10,9 +10,9 @@ export type ActionResult =
 
 export class GameStateSnapshot {
     topCards: Card[] = [];
-    myHand : Card[] = [];
+    myHand: Card[] = [];
     currentPlayerId: number = 0;
     //playerCardCount (type Record number)
-    direction= 1|-1;
+    direction = 1 | -1;
 
 }

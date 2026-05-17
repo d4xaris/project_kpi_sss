@@ -7,7 +7,7 @@ export class GameState {
     private deck: Card[];
     private playerIds: number[];
     private playerHands: Map<number, Card[]>;
-    direction = 1 | -1;
+    direction: 1 | -1 = 1;
     private discard_deck: Card[] = [];
     currentPlayerIndex = 0;
     private drawBuffer = 0;
@@ -69,7 +69,11 @@ export class GameState {
          hand.splice(cardIndex, 1);
          this.discard_deck.push(this.topCard);
          this.topCard = card;
-
+         //this.applyCardEffect(card);
          return {success: true};
+     }
+     private advanceTurn() {
+         this.currentPlayerIndex = (this.currentPlayerIndex + this.direction + this.playerIds.length) % this.playerIds.length;
+
      }
 }
