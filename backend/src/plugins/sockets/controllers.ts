@@ -1,12 +1,23 @@
 import { OnSocketEvent } from "./socket.decorator.js";
 import { Deck } from "../../game/Deck.js";
 import { GameState } from "../../game/GameState.js";
-import type { Card } from "../../game/shared.js";
 import { GameLogger } from "../../game/logger/logger.js";
 import { Socket } from "socket.io";
+import type { Card } from "../../game/shared.js";
+import type { Slot, GameStateSnapshot } from "./socketTypes.js";
+import {
+  getSlot,
+  buildSnapshot,
+  advanceTurn,
+  peekNext,
+  forceDrawCards,
+  broadcastTurn,
+} from "./socketFunctions.js";
 
 export class GameController {
   private gameStates = new Map<number, GameState>();
+  private gamePlayerIds = new Map<number, number[]>();
+  private playerNicknames = new Map<number, string>();
   private gameLoggers = new Map<number, GameLogger>();
 
   public getLogger(gameId: number): GameLogger | undefined {
@@ -19,9 +30,11 @@ export class GameController {
       const { gameId, nickname, userId } = data;
 
       socket.join(`${gameId}`);
+      socket.join(`user_${userId}`);
       socket.data.nickname = nickname;
       socket.data.userId = userId;
       socket.data.gameId = gameId;
+      this.playerNicknames.set(userId, nickname);
 
       const session = await app.prisma.gameSession.findUnique({
         where: { id: gameId },
@@ -42,10 +55,9 @@ export class GameController {
         });
       }
 
-      app.io.to(`${gameId}`).emit("joined_player", {
-        id: String(userId),
-        nickname: nickname,
-      });
+      socket
+        .to(`${gameId}`)
+        .emit("joined_player", { id: String(userId), nickname });
 
       app.io.emit("lobby_room_updated", {
         id: String(gameId),
@@ -105,6 +117,7 @@ export class GameController {
         id: String(gameId),
         playerCount: session._count.players,
       });
+
       const logger = this.gameLoggers.get(gameId);
       logger?.log(
         userId,
@@ -136,28 +149,46 @@ export class GameController {
         });
       }
 
+      if (session.hostId !== socket.data.userId) {
+        return socket.emit("error_message", {
+          code: "FORBIDDEN",
+          message: "Only the host can start",
+        });
+      }
+
+      app.io.emit("lobby_room_removed", { id: String(gameId) });
+
       const deck = new Deck();
       deck.shuffle();
       const playersIds = session.players.map((p: { id: any }) => p.id);
       const gameState = new GameState(playersIds, deck.getCards());
+
       this.gameStates.set(gameId, gameState);
+      this.gamePlayerIds.set(gameId, playersIds);
 
       for (const player of session.players) {
-        const socketId = null;
-        // need to add some code when it will be possible
-        // const hand = gameState.
-        // app.io.to(`user_${player.id}`).emit("player_hand", {cards: hand});
+        if (!this.playerNicknames.has(player.id)) {
+          this.playerNicknames.set(
+            player.id,
+            (player as any).nickname ?? `Player ${player.id}`,
+          );
+        }
       }
 
       app.io.to(`${gameId}`).emit("game_start_settings", {
-        players: playersIds,
-        status: "PLAYING",
-        gameSettings: {
-          topCard: gameState.topCard,
-          currentPlayerIndex: gameState.currentPlayerIndex,
-          direction: gameState.direction,
-        },
+        sessionId: gameId,
+        playerCount: playersIds.length,
       });
+
+      for (const player of session.players) {
+        const snapshot = buildSnapshot(
+          gameState,
+          playersIds,
+          player.id,
+          this.playerNicknames,
+        );
+        app.io.to(`user_${player.id}`).emit("game_state", snapshot);
+      }
 
       const logger = new GameLogger(gameId);
       this.gameLoggers.set(gameId, logger);

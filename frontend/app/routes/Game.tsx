@@ -1,233 +1,269 @@
-import { useState, useEffect, useRef } from 'react';
-import { useLocation, useBlocker, useNavigate } from 'react-router';
-import { MOCK_HAND, MOCK_TOP_CARD } from '~/mockData';
-import { sounds } from '~/sounds';
-import { useAuth, apiFetch } from '~/hooks/useAuth';
-import ColorPicker, { type CardColor } from '~/components/ColorPicker';
-import OpponentLayout from '~/components/OpponentLayout';
-import WinScreen from '~/components/WinScreen';
-import TrollScreen from '~/components/TrollScreen';
-import SoloEffects from '~/components/SoloEffects';
-import CatchEffect from '~/components/CatchEffect';
-import FlyingCard from '~/components/FlyingCard';
-import GameCurtain from '~/components/GameCurtain';
-import TableCenter from '~/components/TableCenter';
-import PlayerHand from '~/components/PlayerHand';
-import GameActions from '~/components/GameActions';
-import { useSolo } from '~/hooks/useSolo';
-import { useCatch } from '~/hooks/useCatch';
-import { mkUid } from '~/types/game';
-import type { Phase, Turn, Slot, Card, HandCard } from '~/types/game';
+import { useState, useEffect, useRef } from "react";
+import { useLocation, useBlocker, useNavigate } from "react-router";
+import { sounds } from "~/sounds";
+import { useAuth, apiFetch } from "~/hooks/useAuth";
+import { getSocket } from "~/socket/client";
+import ColorPicker, { type CardColor } from "~/components/ColorPicker";
+import OpponentLayout from "~/components/OpponentLayout";
+import WinScreen from "~/components/WinScreen";
+import TrollScreen from "~/components/TrollScreen";
+import SoloEffects from "~/components/SoloEffects";
+import CatchEffect from "~/components/CatchEffect";
+import FlyingCard from "~/components/FlyingCard";
+import GameCurtain from "~/components/GameCurtain";
+import TableCenter from "~/components/TableCenter";
+import PlayerHand from "~/components/PlayerHand";
+import GameActions from "~/components/GameActions";
+import { useSolo } from "~/hooks/useSolo";
+import { useCatch } from "~/hooks/useCatch";
+import { mkUid } from "~/types/game";
+import type { Phase, Turn, Slot, Card, HandCard } from "~/types/game";
 
-const OPPONENT_ORDER: Record<number, Record<1 | -1, Slot[]>> = {
-  2: { 1: ['top'],                  [-1]: ['top']                  },
-  3: { 1: ['top', 'right'],         [-1]: ['right', 'top']         },
-  4: { 1: ['left', 'top', 'right'], [-1]: ['right', 'top', 'left'] },
-};
-
-const DRAW_COLORS = ['crimson', 'purple', 'yellow', 'orange'] as const;
-const DRAW_VALS   = ['1','2','3','4','5','6','7','8','9'] as const;
-const randomCard  = (): HandCard => {
-  // ~2% chance of drawing the legendary troll card in mock mode
-  if (Math.random() < 0.02) return { color: 'wild', value: 'troll', uid: mkUid() };
-  return {
-    color: DRAW_COLORS[Math.floor(Math.random() * DRAW_COLORS.length)],
-    value: DRAW_VALS  [Math.floor(Math.random() * DRAW_VALS.length)],
-    uid:   mkUid(),
-  };
-};
-
-const isPlayable = (card: Card, top: Card, wildColor: CardColor | null): boolean => {
-  if (card.color === 'wild') return true;
-  if (wildColor)             return card.color === wildColor;
-  return card.color === top.color || card.value === top.value;
-};
-
-interface LocationState { fromRoom?: boolean; playerCount?: number; sessionId?: number }
+interface LocationState {
+  fromRoom?: boolean;
+  playerCount?: number;
+  sessionId?: number;
+}
 
 // Game
 
 export default function Game() {
-  const location    = useLocation();
-  const navigate    = useNavigate();
-  const { user }    = useAuth();
-  const fromRoom    = (location.state as LocationState)?.fromRoom    === true;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const fromRoom = (location.state as LocationState)?.fromRoom === true;
   const playerCount = (location.state as LocationState)?.playerCount ?? 4;
-  const sessionId   = (location.state as LocationState)?.sessionId  ?? null;
+  const sessionId = (location.state as LocationState)?.sessionId ?? null;
 
-// State
-  const [phase,           setPhase]           = useState<Phase>(fromRoom ? 'closed' : 'closing');
-  const [winner,          setWinner]          = useState<string | null>(null);
-  const [showTroll,       setShowTroll]       = useState(false);
-  const [winExiting,      setWinExiting]      = useState(false);
-  const [hand,            setHand]            = useState<HandCard[]>(() => MOCK_HAND.map(c => ({ ...c, uid: mkUid() })));
-  const [topCard,         setTopCard]         = useState(MOCK_TOP_CARD);
-  const [currentTurn,     setCurrentTurn]     = useState<Turn>('player');
-  const [direction,       setDirection]       = useState<1 | -1>(1);
+  // State
+  const [phase, setPhase] = useState<Phase>(fromRoom ? "closed" : "closing");
+  const [winner, setWinner] = useState<string | null>(null);
+  const [showTroll, setShowTroll] = useState(false);
+  const [winExiting, setWinExiting] = useState(false);
+  const [hand, setHand] = useState<HandCard[]>([]);
+  const [topCard, setTopCard] = useState<Card>({
+    color: "wild",
+    value: "wild",
+  });
+  const [currentTurn, setCurrentTurn] = useState<Turn>("player");
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [activeWildColor, setActiveWildColor] = useState<CardColor | null>(null);
-  const [oppCounts,       setOppCounts]       = useState({ top: 6, left: 6, right: 6 });
-  const [opponentNames,   setOpponentNames]   = useState<Partial<Record<Slot, string>>>({});
-  const [flyingCard,      setFlyingCard]      = useState<Slot | null>(null);
+  const [activeWildColor, setActiveWildColor] = useState<CardColor | null>(
+    null,
+  );
+  const [oppCounts, setOppCounts] = useState({ top: 0, left: 0, right: 0 });
+  const [opponentNames, setOpponentNames] = useState<
+    Partial<Record<Slot, string>>
+  >({});
+  const [flyingCard, setFlyingCard] = useState<Slot | null>(null);
 
-  const turnTimers      = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const pendingWildTurn = useRef<{ toVisit: Slot[]; drawTarget: Slot | null; drawAmount: number } | null>(null);
+  const turnTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const pendingWildTurn = useRef<Card | null>(null);
 
-  const MOCK_OPP_CARDS = [
-    { color: 'purple',  value: '7'       },
-    { color: 'orange',  value: 'skip'    },
-    { color: 'crimson', value: '3'       },
-    { color: 'yellow',  value: '5'       },
-    { color: 'purple',  value: 'reverse' },
-    { color: 'orange',  value: '9'       },
-    { color: 'crimson', value: 'drawtwo' },
-  ] as const;
-  const mockOppIdx = useRef(0);
+  const hasPlayableCard = hand.some((c) => {
+    if (c.color === "wild") return true;
+    if (activeWildColor) return c.color === activeWildColor;
+    return c.color === topCard.color || c.value === topCard.value;
+  });
 
-  const { soloCalled, showSoloSplash, soloEffects, handleSolo } = useSolo(hand.length);
+  const { soloCalled, showSoloSplash, soloEffects, handleSolo, triggerSolo } =
+    useSolo(hand.length);
   const { catchTarget, showCatchEffect, handleCatch } = useCatch(
     oppCounts,
-    (slot) => setOppCounts(prev => ({ ...prev, [slot]: prev[slot] + 2 })),
+    (slot) => {
+      setOppCounts((prev) => ({ ...prev, [slot]: prev[slot] + 2 }));
+      const u = JSON.parse(localStorage.getItem("user") ?? "{}");
+      getSocket().emit("catch_solo", { gameId: sessionId, userId: u.id, slot });
+    },
   );
 
-  const hasPlayableCard = hand.some(c => isPlayable(c, topCard, activeWildColor));
-
-// Effects 
-  useBlocker(() => phase === 'done' && winner === null);
+  // Effects
+  useBlocker(() => phase === "done" && winner === null);
 
   useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
   }, []);
 
-  useEffect(() => () => { turnTimers.current.forEach(clearTimeout); }, []);
-
-  useEffect(() => { if (phase === 'closed') sounds.start(); }, [phase]);
+  useEffect(() => {
+    if (phase === "closed") sounds.start();
+  }, [phase]);
 
   useEffect(() => {
     if (fromRoom) {
-      const t1 = setTimeout(() => setPhase('opening'), 900);
-      const t2 = setTimeout(() => setPhase('done'),    1650);
-      return () => { clearTimeout(t1); clearTimeout(t2); };
+      const t1 = setTimeout(() => setPhase("opening"), 900);
+      const t2 = setTimeout(() => setPhase("done"), 1650);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
     }
-    const t1 = setTimeout(() => setPhase('closed'),  700);
-    const t2 = setTimeout(() => setPhase('opening'), 1700);
-    const t3 = setTimeout(() => setPhase('done'),    2450);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    const t1 = setTimeout(() => setPhase("closed"), 700);
+    const t2 = setTimeout(() => setPhase("opening"), 1700);
+    const t3 = setTimeout(() => setPhase("done"), 2450);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
   }, []);
 
   useEffect(() => {
-    if (hand.length === 0 && phase === 'done') {
-      const nick = user?.nickname ?? 'You';
-      setTimeout(() => {
-        setWinner(nick);
-        if (sessionId && user?.id)
-          apiFetch(`/game/${sessionId}/finish`, { method: 'POST', body: JSON.stringify({ winnerId: user.id }) }).catch(() => {});
-      }, 500);
-    }
-  }, [hand.length, phase]);
+    const socket = getSocket();
 
-// Handlers 
-  const runTurnSequence = (toVisit: Slot[], drawTarget: Slot | null, drawAmount: number) => {
-    const TURN_MS = 1800;
-    const PLAY_MS = 1000;
-    let base = 0;
-
-    if (drawTarget) {
-      const dt = drawTarget;
-      turnTimers.current.push(setTimeout(() => setCurrentTurn(dt), base));
-      turnTimers.current.push(setTimeout(() => {
-        setOppCounts(prev => ({ ...prev, [dt]: prev[dt] + drawAmount }));
-      }, base + PLAY_MS));
-      base += TURN_MS;
-    }
-
-    toVisit.forEach(slot => {
-      turnTimers.current.push(setTimeout(() => setCurrentTurn(slot), base));
-      turnTimers.current.push(setTimeout(() => {
-        setOppCounts(prev => ({ ...prev, [slot]: Math.max(0, prev[slot] - 1) }));
-        const played = MOCK_OPP_CARDS[mockOppIdx.current % MOCK_OPP_CARDS.length];
-        mockOppIdx.current += 1;
-        setTopCard(played as Card);
-        setActiveWildColor(null);
-        if (played.value === 'reverse') setDirection(d => (d * -1) as 1 | -1);
-        if (played.value === 'drawtwo') setHand(prev => [...prev, randomCard(), randomCard()]);
-      }, base + PLAY_MS));
-      base += TURN_MS;
+    socket.on("game_state", (snapshot: any) => {
+      setHand(snapshot.yourHand.map((c: Card) => ({ ...c, uid: mkUid() })));
+      setTopCard(snapshot.topCard);
+      setCurrentTurn(snapshot.currentTurn);
+      setOppCounts({
+        top: snapshot.opponents.top?.cardCount ?? 0,
+        left: snapshot.opponents.left?.cardCount ?? 0,
+        right: snapshot.opponents.right?.cardCount ?? 0,
+      });
+      setOpponentNames({
+        top: snapshot.opponents.top?.nickname,
+        left: snapshot.opponents.left?.nickname,
+        right: snapshot.opponents.right?.nickname,
+      });
     });
 
-    turnTimers.current.push(setTimeout(() => setCurrentTurn('player'), base));
-  };
+    socket.on("game_turn", (data: { turn: Turn }) => {
+      setCurrentTurn(data.turn);
+    });
 
+    socket.on("card_played", (data: { slot: Slot; card: Card }) => {
+      setOppCounts((prev) => ({
+        ...prev,
+        [data.slot]: Math.max(0, prev[data.slot] - 1),
+      }));
+      setTopCard(data.card);
+      setActiveWildColor(null);
+      setFlyingCard(data.slot);
+      setTimeout(() => setFlyingCard(null), 550);
+    });
+
+    socket.on("cards_drawn", (data: { cards: Card[] }) => {
+      setHand((prev) => [
+        ...prev,
+        ...data.cards.map((c) => ({ ...c, uid: mkUid() })),
+      ]);
+    });
+
+    socket.on("player_drew", (data: { slot: Slot; count: number }) => {
+      setOppCounts((prev) => ({
+        ...prev,
+        [data.slot]: prev[data.slot] + data.count,
+      }));
+    });
+
+    socket.on("solo_catch_result", (data: { slot: Slot; count: number }) => {
+      setOppCounts((prev) => ({
+        ...prev,
+        [data.slot]: prev[data.slot] + data.count,
+      }));
+    });
+
+    socket.on("color_chosen", (data: { color: CardColor }) => {
+      setActiveWildColor(data.color);
+    });
+
+    socket.on(
+      "game_finished",
+      (data: { winnerId: number; winnerNickname: string }) => {
+        setWinner(data.winnerNickname);
+        if (sessionId) {
+          apiFetch(`/game/${sessionId}/finish`, {
+            method: "POST",
+            body: JSON.stringify({ winnerId: data.winnerId }),
+          }).catch(() => {});
+        }
+      },
+    );
+
+    socket.on("solo_called", () => {
+      triggerSolo();
+    });
+
+    return () => {
+      socket.off("game_state");
+      socket.off("game_turn");
+      socket.off("card_played");
+      socket.off("cards_drawn");
+      socket.off("player_drew");
+      socket.off("solo_catch_result");
+      socket.off("color_chosen");
+      socket.off("game_finished");
+      socket.off("solo_called");
+    };
+  }, [sessionId, triggerSolo]);
+
+  // Handlers
   const handleCardClick = (card: Card, index: number) => {
-    if (currentTurn !== 'player') return;
+    if (currentTurn !== "player") return;
 
-    // ── Troll card: everyone loses, video plays, no way back except reload/wait ──
-    if (card.value === 'troll') {
-      turnTimers.current.forEach(clearTimeout);
-      turnTimers.current = [];
-      setHand(prev => prev.filter((_, i) => i !== index));
-      setWinner('__troll__'); // unblocks useBlocker so navigate('/') works inside TrollScreen
+    if (card.value === "troll") {
+      setHand((prev) => prev.filter((_, i) => i !== index));
+      setWinner("__troll__");
       setShowTroll(true);
       return;
     }
 
-    setHand(prev => prev.filter((_, i) => i !== index));
+    setHand((prev) => prev.filter((_, i) => i !== index));
     setTopCard(card);
     setActiveWildColor(null);
-    turnTimers.current.forEach(clearTimeout);
-    turnTimers.current = [];
 
-    const nextDir: 1 | -1  = card.value === 'reverse' ? (direction * -1) as 1 | -1 : direction;
-    if (card.value === 'reverse') setDirection(nextDir);
-
-    const isDrawCard = card.value === 'drawtwo' || card.value === 'wild_draw4';
-    const drawAmount = card.value === 'drawtwo' ? 2 : card.value === 'wild_draw4' ? 4 : 0;
-    const opponents  = (OPPONENT_ORDER[playerCount] ?? OPPONENT_ORDER[4])[nextDir];
-    let toVisit      = card.value === 'skip' ? opponents.slice(1) : opponents;
-    let drawTarget: Slot | null = null;
-    if (isDrawCard && toVisit.length > 0) { drawTarget = toVisit[0]; toVisit = toVisit.slice(1); }
-
-    if (card.color === 'wild') {
+    if (card.color === "wild") {
       setShowColorPicker(true);
-      pendingWildTurn.current = { toVisit, drawTarget, drawAmount };
+      pendingWildTurn.current = card;
       return;
     }
-    runTurnSequence(toVisit, drawTarget, drawAmount);
+
+    getSocket().emit("play_card", {
+      gameId: sessionId,
+      userId: user?.id,
+      card,
+    });
   };
 
   const handleDeckClick = () => {
-    if (currentTurn !== 'player' || hasPlayableCard) return;
-    setHand(prev => [...prev, randomCard()]);
-    turnTimers.current.forEach(clearTimeout);
-    turnTimers.current = [];
-    runTurnSequence((OPPONENT_ORDER[playerCount] ?? OPPONENT_ORDER[4])[direction], null, 0);
+    if (currentTurn !== "player" || hasPlayableCard) return;
+    getSocket().emit("draw_card", { gameId: sessionId, userId: user?.id });
   };
 
   const handleColorPick = (color: CardColor) => {
     setShowColorPicker(false);
     setActiveWildColor(color);
-    const pending = pendingWildTurn.current;
-    if (pending) {
-      pendingWildTurn.current = null;
-      runTurnSequence(pending.toVisit, pending.drawTarget, pending.drawAmount);
+    const card = pendingWildTurn.current;
+    pendingWildTurn.current = null;
+    if (card) {
+      getSocket().emit("play_card", {
+        gameId: sessionId,
+        userId: user?.id,
+        card,
+      });
+      getSocket().emit("choose_color", {
+        gameId: sessionId,
+        userId: user?.id,
+        color,
+      });
     }
   };
 
   const handleGoHome = () => {
     setWinExiting(true);
-    setTimeout(() => navigate('/'), 750);
+    setTimeout(() => navigate("/"), 750);
   };
 
-// Render
+  // Render
   return (
     <div className="game">
       <img className="game-bg" src="/table.jpg" draggable={false} />
 
-      {phase !== 'done' && <GameCurtain phase={phase} />}
+      {phase !== "done" && <GameCurtain phase={phase} />}
 
-      {phase === 'done' && (
+      {phase === "done" && (
         <>
           <TableCenter
             topCard={topCard}
@@ -252,7 +288,7 @@ export default function Game() {
             catchTarget={catchTarget}
             showSolo={hand.length === 1}
             soloCalled={soloCalled}
-            onSolo={handleSolo}
+            onSolo={() => handleSolo(sessionId!, user?.id!)}
             onCatch={handleCatch}
           />
         </>
@@ -263,8 +299,12 @@ export default function Game() {
 
       {showColorPicker && <ColorPicker onPick={handleColorPick} />}
 
-      {winner !== null && winner !== '__troll__' && (
-        <WinScreen nickname={winner} onHome={handleGoHome} exiting={winExiting} />
+      {winner !== null && winner !== "__troll__" && (
+        <WinScreen
+          nickname={winner}
+          onHome={handleGoHome}
+          exiting={winExiting}
+        />
       )}
 
       {showTroll && <TrollScreen />}

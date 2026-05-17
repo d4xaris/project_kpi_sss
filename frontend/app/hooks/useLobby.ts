@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { apiFetch } from "./useAuth";
 import { getSocket, connectSocket } from "~/socket/client";
 
-const USE_MOCK = true;
-
 export interface RoomSummary {
   id: number;
   sessionName: string;

@@ -98,6 +98,8 @@ export default fp(async (app) => {
             `User ${nickname} (ID: ${userId}) automatically removed from room ${gameId}`,
           );
 
+          socket.leave(`user_${userId}`);
+
           const logger = gameController.getLogger(gameId);
           logger?.log(
             userId,
