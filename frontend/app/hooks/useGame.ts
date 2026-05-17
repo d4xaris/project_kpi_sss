@@ -26,10 +26,7 @@ export function useGame() {
     return true;
   };
 
-  const startGame = async (
-    roomId: number,
-    userId: number,
-  ): Promise<boolean> => {
+  const startGame = async (roomId: number): Promise<boolean> => {
     const res = await apiFetch(`/game/${roomId}/start`, { method: "POST" });
     if (!res.ok) return false;
     getSocket().emit("game_start_request", { gameId: roomId });
