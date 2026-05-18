@@ -118,4 +118,29 @@ export class GameState {
          }
          }
 
+    isGameOver(): boolean {
+        for (const [, hand] of this.playerHands) {
+            if (hand.length === 0) return true;
+        }
+        return false;
+    }
+    getResult(): { winner: number } | null {
+        for (const [playerId, hand] of this.playerHands) {
+            if (hand.length === 0) return { winner: playerId };
+        }
+        return null;
+    }
+    getSnapshot(requestingPlayerId: number) {
+        const counts: Record<number, number> = {};
+        for (const [id, hand] of this.playerHands) {
+            counts[id] = hand.length;
+        }
+        return {
+            topCard: this.topCard,
+            currentPlayerId: this.playerIds[this.currentPlayerIndex],
+            direction: this.direction,
+            playerCardCounts: counts,
+            myHand: this.playerHands.get(requestingPlayerId) ?? [],
+        };
+    }
 }
