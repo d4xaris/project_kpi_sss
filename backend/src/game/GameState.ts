@@ -171,4 +171,13 @@ export class GameState {
             myHand: this.playerHands.get(requestingPlayerId) ?? [],
         };
     }
+    removePlayer(playerId: number): void {
+        const idx = this.playerIds.indexOf(playerId);
+        if (idx === -1) return;
+        this.playerIds.splice(idx, 1);
+        this.playerHands.delete(playerId);
+        if (this.currentPlayerIndex >= this.playerIds.length) {
+            this.currentPlayerIndex = 0;
+        }
+    }
 }
