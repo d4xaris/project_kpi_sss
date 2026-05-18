@@ -1,12 +1,7 @@
 FROM node:20-alpine AS development-dependencies-env
 WORKDIR /app
-COPY package.json yarn.lock ./
+COPY . .
 RUN yarn install --frozen-lockfile
-
-FROM node:20-alpine AS production-dependencies-env
-WORKDIR /app
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile --production
 
 FROM node:20-alpine AS build-env
 WORKDIR /app
@@ -16,7 +11,7 @@ RUN yarn build
 
 FROM node:20-alpine
 WORKDIR /app
-COPY --from=production-dependencies-env /app/node_modules ./node_modules
+COPY --from=development-dependencies-env /app/node_modules ./node_modules
 COPY --from=build-env /app/build ./build
-COPY package.json ./
+COPY --from=build-env /app/package.json ./
 CMD ["yarn", "start"]

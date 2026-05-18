@@ -17,10 +17,11 @@ RUN yarn build
 FROM node:20-alpine AS runner
 WORKDIR /app
 COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile --production --ignore-engines
+RUN yarn install --frozen-lockfile --ignore-engines
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/src/generated ./src/generated
+COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 
 ENV NODE_ENV=production
 
