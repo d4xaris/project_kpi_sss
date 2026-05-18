@@ -1,9 +1,6 @@
 import {type ActionResult, type Card} from "./shared.js";
 import {canPlayCards} from "./rules.js";
 import {Deck} from "./Deck.js";
-import {type} from "node:os";
-
-
 
 export class GameState {
     private deck: Card[];
@@ -13,6 +10,7 @@ export class GameState {
     private discard_deck: Card[] = [];
     currentPlayerIndex = 0;
     private drawBuffer = 0;
+    pendingDraws: number = 0;
     topCard: Card;
     //логіка стола і гравців
     constructor(ids: number[], startingCards: Card[]) {
@@ -46,17 +44,43 @@ export class GameState {
         }
 
     };
-    private reshuffleDiscardIntoDeck() {
-        if (this.discard_deck.length === 0) {
-            this.discard_deck = this.deck;
-            this.discard_deck = [];
 
+    private reshuffleDiscardIntoDeck() {
+        if (this.discard_deck.length > 0) {
+            const topCard = this.discard_deck.pop()!;
+            this.deck = this.discard_deck;
+            this.discard_deck = [topCard];
+            Deck.shuffle(this.deck);
         }
     }
-    drawCards(playerId: number, count: number) {
+    public drawCard(playerId: number): ActionResult {
+        if (playerId !== this.playerIds[this.currentPlayerIndex]) {
+            return { success: false, reason: 'NOT_YOUR_TURN' };
+        }
+        let amountToDraw = this.pendingDraws > 0 ? this.pendingDraws : 1;
+        let drawnCards = this.deck.splice(0, amountToDraw);
 
+        if (drawnCards.length < amountToDraw) {
+            this.reshuffleDiscardIntoDeck();
+
+            const remainingCount = amountToDraw - drawnCards.length;
+
+            const extraCards = this.deck.splice(0, remainingCount);
+            drawnCards = drawnCards.concat(extraCards);
+        }
+
+        const hand = this.playerHands.get(playerId);
+        if (hand) {
+            hand.push(...drawnCards);
+        }
+
+        if (this.pendingDraws > 0) {
+            this.pendingDraws = 0;
+        }
+
+        this.advanceTurn();
+        return { success: true };
     }
-
      public playCard(playerIds: number,card: Card):ActionResult {
          const activePlayerId = this.playerIds[this.currentPlayerIndex];
          if (this.drawBuffer > 0) {
@@ -93,29 +117,33 @@ export class GameState {
      private advanceTurn() {
          this.currentPlayerIndex = (this.currentPlayerIndex + this.direction + this.playerIds.length) % this.playerIds.length;
      }
-     private applyCardEffect(card: any) {
-         switch (card.value) {
-             case 'skip':
-                 this.advanceTurn()
-                 this.advanceTurn();
-                 break
-             case 'reverse':
-                 this.direction *= -1;
-                 this.advanceTurn()
-                 break
-             case 'drawtwo':
-                 this.drawBuffer += 2;
-                 this.advanceTurn()
-                 break
-             case 'wild_draw4':
-                    this.drawBuffer += 4;
-                    this.advanceTurn()
-                 break
-             case 'wild':
+    private applyCardEffect(card: Card): void {
+        switch (card.value) {
+            case 'skip':
+                this.advanceTurn();
+                this.advanceTurn();
+                break;
+            case 'reverse':
+                this.direction *= -1;
+                this.advanceTurn();
+                break;
+            case 'drawtwo':
+                this.pendingDraws += 2;
+                this.advanceTurn();
+                break;
 
-                 break
-
-         }
-         }
+            case 'wild_draw4':
+                this.pendingDraws += 4;
+                this.advanceTurn();
+                break;
+            case 'wild':
+            case 'troll':
+                // Color change is handled by the caller (GameRoom)
+                this.advanceTurn();
+                break;
+            default:
+                this.advanceTurn();
+        }
+    }
 
 }

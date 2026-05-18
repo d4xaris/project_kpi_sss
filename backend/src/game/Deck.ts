@@ -38,12 +38,12 @@ export class Deck {
     public getCards() {
         return this.cards;
     }
-    shuffle (){
-        for (let i = this.cards.length - 1; i > 0; i--) {
+    static shuffle(targetArray: Card[]) {
+        for (let i = targetArray.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            const temp = this.cards[i] as Card;
-            this.cards[i] = this.cards[j] as Card;
-            this.cards[j] = temp;
+            const temp = targetArray[i] as Card;
+            targetArray[i] = targetArray[j] as Card;
+            targetArray[j] = temp;
         }
     } // тасование карт алгоритмом Фишера-Йетса
     draw(count: number) {
