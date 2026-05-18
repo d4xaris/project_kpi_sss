@@ -52,9 +52,9 @@ export function withStrategy(strategy: AuthStrategy, apiKey?: string) {
   return () => configureProxy(prev);
 }
 
-function buildHeaders(init?: HeadersInit): Headers {
+function buildHeaders(init?: HeadersInit, body?: BodyInit | null): Headers {
   const h = new Headers(init);
-  if (!h.has('Content-Type')) h.set('Content-Type', 'application/json');
+  if (body != null && !h.has('Content-Type')) h.set('Content-Type', 'application/json');
 
   if (cfg.strategy === 'jwt') {
     const token = localStorage.getItem('token');
@@ -106,7 +106,7 @@ export async function apiFetch(url: string, init: RequestInit = {}): Promise<Res
   const fullUrl = `${API_BASE}${url}`;
   const start   = Date.now();
   const method  = (init.method ?? 'GET').toUpperCase();
-  const send    = () => fetch(fullUrl, { ...init, headers: buildHeaders(init.headers) });
+  const send    = () => fetch(fullUrl, { ...init, headers: buildHeaders(init.headers, init.body) });
 
   let res: Response;
   try {
