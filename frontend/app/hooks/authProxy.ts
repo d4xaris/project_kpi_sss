@@ -96,14 +96,17 @@ async function refreshToken(): Promise<string | null> {
   }
 }
 
+const API_BASE = import.meta.env.VITE_API_URL ?? '';
+
 export async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
   if (!bucket.consume()) {
     throw new Error(`Rate limit exceeded (max ${cfg.rateLimitRpm} req/min)`);
   }
 
-  const start  = Date.now();
-  const method = (init.method ?? 'GET').toUpperCase();
-  const send   = () => fetch(url, { ...init, headers: buildHeaders(init.headers) });
+  const fullUrl = `${API_BASE}${url}`;
+  const start   = Date.now();
+  const method  = (init.method ?? 'GET').toUpperCase();
+  const send    = () => fetch(fullUrl, { ...init, headers: buildHeaders(init.headers) });
 
   let res: Response;
   try {
@@ -113,14 +116,14 @@ export async function apiFetch(url: string, init: RequestInit = {}): Promise<Res
       if (fresh) res = await send();
     }
   } catch (err) {
-    log.push({ timestamp: new Date().toISOString(), method, url, status: 'error', durationMs: Date.now() - start });
+    log.push({ timestamp: new Date().toISOString(), method, url: fullUrl, status: 'error', durationMs: Date.now() - start });
     throw err;
   }
 
   if (cfg.enableLogging) {
-    const entry = { timestamp: new Date().toISOString(), method, url, status: res.status, durationMs: Date.now() - start };
+    const entry = { timestamp: new Date().toISOString(), method, url: fullUrl, status: res.status, durationMs: Date.now() - start };
     log.push(entry);
-    console.log(`%c${res.ok ? '✓' : '✗'} ${method} ${url} → ${res.status} (${entry.durationMs}ms)`,
+    console.log(`%c${res.ok ? '✓' : '✗'} ${method} ${fullUrl} → ${res.status} (${entry.durationMs}ms)`,
       `color:${res.ok ? '#4caf50' : '#f44336'}`);
   }
 
