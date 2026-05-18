@@ -25,6 +25,20 @@ export default async function gameRoutes(app: FastifyInstance) {
 
     const { sessionName, maxPlayers } = request.body as any;
 
+    const activeSession = await app.prisma.gameSession.findFirst({
+      where: {
+        players: { some: { id: user.id } },
+        status: { in: ['LOBBY', 'PLAYING'] },
+      },
+    });
+    if (activeSession) {
+      return reply.status(400).send({
+        success: false,
+        message: 'You are already in another session',
+        activeSessionId: activeSession.id,
+      });
+    }
+
     const game = await app.prisma.gameSession.create({
       data: {
         sessionName: sessionName,
@@ -157,7 +171,7 @@ export default async function gameRoutes(app: FastifyInstance) {
     const userId = String(user.id);
 
     const session = await app.prisma.gameSession.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: Number(id) },
       include: {
         _count: {
           select: {
