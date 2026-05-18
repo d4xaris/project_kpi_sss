@@ -1,7 +1,5 @@
 import {type ActionResult, type Card} from "./shared.js";
 import {canPlayCards} from "./rules.js";
-import {Deck} from "./Deck.js";
-import {type} from "node:os";
 
 
 
@@ -47,14 +45,30 @@ export class GameState {
 
     };
     private reshuffleDiscardIntoDeck() {
-        if (this.discard_deck.length === 0) {
-            this.discard_deck = this.deck;
-            this.discard_deck = [];
-
+        if (this.discard_deck.length === 0) return;
+        // Move discard pile back into deck and shuffle it
+        this.deck = this.discard_deck;
+        this.discard_deck = [];
+        for (let i = this.deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.deck[i], this.deck[j]] = [this.deck[j]!, this.deck[i]!];
         }
     }
-    drawCards(playerId: number, count: number) {
 
+    drawCards(playerId: number, count: number) {
+        const hand = this.playerHands.get(playerId);
+        if (!hand) return;
+        // Refill deck from discard if running low
+        if (this.deck.length < count) {
+            this.reshuffleDiscardIntoDeck();
+        }
+        const actual = Math.min(count, this.deck.length);
+        const drawn = this.deck.splice(0, actual);
+        hand.push(...drawn);
+        // Clear any pending draw penalty
+        this.drawBuffer = 0;
+        // Drawing ends your turn
+        this.advanceTurn();
     }
 
      public playCard(playerIds: number,card: Card):ActionResult {
@@ -67,9 +81,6 @@ export class GameState {
                  return {success: false , reason:'CANNOT_OVERRIDE_DRAW4_WITH_DRAW2'}
              }
          }
-        if (this.drawBuffer === 0){
-            return {success: false, reason: 'DRAW_BUFFER_ACTIVE'};
-        }
          if (playerIds !== activePlayerId) {
              return {success: false, reason: 'NOT_YOUR_TURN'};
          }//first check
@@ -112,9 +123,10 @@ export class GameState {
                     this.advanceTurn()
                  break
              case 'wild':
-
-                 break
-
+                 break;
+             default:
+                 this.advanceTurn();
+                 break;
          }
          }
 
@@ -125,6 +137,7 @@ export class GameState {
         return false;
     }
     getResult(): { winner: number } | null {
+
         for (const [playerId, hand] of this.playerHands) {
             if (hand.length === 0) return { winner: playerId };
         }

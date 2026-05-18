@@ -18,4 +18,5 @@ export interface LogEntry {
   player: string;
   action: string;
   message: string;
+
 }

@@ -1,6 +1,4 @@
 import type { FastifyInstance } from "fastify";
-import { GameRoom } from "../game/GameRoom.js";
-import { Session } from "node:inspector";
 
 const gameCreateSchema = {
   body: {
@@ -360,6 +358,7 @@ export default async function gameRoutes(app: FastifyInstance) {
 
     app.io.to(`${sessionId}`).emit("game_finished", {
       winnerId: winnerId,
+      winnerNickname: "",
     });
 
     return {

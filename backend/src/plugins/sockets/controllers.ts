@@ -274,6 +274,7 @@ export class GameController {
     const cardIdx = hand.findIndex(
       (c) => c.color === card.color && c.value === card.value,
     );
+
     if (cardIdx === -1) {
       return socket.emit("error_message", {
         code: "CARD_NOT_IN_HAND",
@@ -281,230 +282,158 @@ export class GameController {
       });
     }
 
-    if (drawBuffer === 0) {
-      const effectiveColor = activeColor ?? gs.topCard.color;
-      const playable =
-        card.color === "wild" ||
-        card.color === effectiveColor ||
-        card.value === gs.topCard.value;
+    // For wild cards, honour the active colour chosen earlier
+    const effectiveTopColor = activeColor ?? gs.topCard.color;
+    if (
+      card.color !== "wild" &&
+      card.color !== effectiveTopColor &&
+      card.value !== gs.topCard.value
+    ) {
+      return socket.emit("error_message", {
+        code: "INVALID_CARD",
+        message: "Card cannot be played",
+      });
+    }
 
-      if (!playable) {
-        return socket.emit("error_message", {
-          code: "INVALID_CARD",
-          message: "Cannot play this card",
-        });
+    const result = gs.playCard(userId, card);
+    if (!result.success) {
+      return socket.emit("error_message", {
+        code: result.reason,
+        message: result.reason,
+      });
+    }
+
+    this.activeColors.delete(gameId);
+
+    const logger = this.gameLoggers.get(gameId);
+    logger?.log(userId, "PLAY_CARD", `Played ${card.color} ${card.value}`);
+
+    for (const pid of playerIds) {
+      const slot = getSlot(playerIds, pid, userId);
+      if (slot !== "player") {
+        app.io.to(`user_${pid}`).emit("card_played", { slot, card });
       }
     }
 
-    hand.splice(cardIdx, 1);
-    const discard: Card[] = (gs as any).discard_deck;
-    discard.push(gs.topCard);
-    gs.topCard = card;
-    this.activeColors.delete(gameId);
-    this.soloCalledBy.set(gameId, null);
-
-    let waitForColor = false;
-
-    switch (card.value) {
-      case "skip":
-        advanceTurn(gs, playerIds, 2);
-        break;
-
-      case "reverse":
-        gs.direction = (gs.direction * -1) as 1 | -1;
-        advanceTurn(gs, playerIds, 1);
-        break;
-
-      case "drawtwo":
-        (gs as any).drawBuffer += 2;
-        advanceTurn(gs, playerIds, 1);
-        break;
-
-      case "wild_draw4":
-        (gs as any).drawBuffer += 4;
-        waitForColor = true;
-        break;
-
-      case "wild":
-        waitForColor = true;
-        break;
-
-      default:
-        advanceTurn(gs, playerIds, 1);
-        break;
+    // Wild cards: wait for colour choice before advancing
+    if (card.value === "wild" || card.value === "wild_draw4") {
+      app.io.to(`user_${userId}`).emit("choose_color_prompt", {});
+      this.broadcastState(gameId, playerIds, gs, app);
+      return;
     }
 
-    for (const pid of playerIds) {
-      if (pid === userId) continue;
-      const slot = getSlot(playerIds, pid, userId) as Slot;
-      app.io.to(`user_${pid}`).emit("card_played", { slot, card });
-    }
-
-    if (hand.length === 0) {
-      const nickname = this.playerNicknames.get(userId) ?? `Player ${userId}`;
-      app.io
-        .to(`${gameId}`)
-        .emit("game_finished", { winnerId: userId, winnerNickname: nickname });
-      this.gameLoggers
-        .get(gameId)
-        ?.system("GAME_FINISHED", `Player ${nickname} won game ${gameId}`);
+    if (gs.isGameOver()) {
+      const r = gs.getResult();
+      const winnerId = r?.winner ?? -1;
+      const winnerNickname = this.playerNicknames.get(winnerId) ?? "";
+      app.io.to(`${gameId}`).emit("game_finished", { winnerId, winnerNickname });
+      logger?.system("GAME_FINISHED", `Winner: ${winnerNickname}`);
+      logger?.close();
       this.cleanupGame(gameId);
       return;
     }
 
     this.broadcastState(gameId, playerIds, gs, app);
-
-    if (!waitForColor) {
-      broadcastTurn(playerIds, playerIds[gs.currentPlayerIndex]!, app);
-    }
-
-    const logger = this.gameLoggers.get(gameId);
-
-    logger?.log(
-      userId,
-      "PLAY_CARD",
-      `Played ${card.color.toUpperCase()} ${card.value}. Next player turn.`,
-    );
+    const nextId = playerIds[gs.currentPlayerIndex]!;
+    broadcastTurn(playerIds, nextId, app);
   }
 
   @OnSocketEvent("draw_card")
   async handleDrawCard(socket: Socket, data: any, app: any) {
-    const { gameId, userId } = data as { gameId: number; userId: number };
+    const { gameId, userId } = data;
 
     const gs = this.gameStates.get(gameId);
     const playerIds = this.gamePlayerIds.get(gameId);
     if (!gs || !playerIds) {
-      return socket.emit("error_message", {
-        code: "NOT_FOUND",
-        message: "Game not found",
-      });
+      return socket.emit("error_message", { code: "NOT_FOUND", message: "Game not found" });
     }
 
     if (userId !== playerIds[gs.currentPlayerIndex]) {
-      return socket.emit("error_message", {
-        code: "NOT_YOUR_TURN",
-        message: "Not your turn",
-      });
+      return socket.emit("error_message", { code: "NOT_YOUR_TURN", message: "Not your turn" });
     }
 
-    const drawBuffer: number = (gs as any).drawBuffer;
-    const count = drawBuffer > 0 ? drawBuffer : 1;
+    gs.drawCards(userId, (gs as any).drawBuffer > 0 ? (gs as any).drawBuffer : 1);
 
-    const drawn = forceDrawCards(gs, userId, count);
+    const logger = this.gameLoggers.get(gameId);
+    logger?.log(userId, "DRAW_CARD", `Player drew card(s)`);
 
-    if (drawBuffer > 0) {
-      (gs as any).drawBuffer = 0;
-    }
-
-    socket.emit("cards_drawn", { cards: drawn });
-
-    for (const pid of playerIds) {
-      if (pid === userId) continue;
-      const slot = getSlot(playerIds, pid, userId) as Slot;
-      app.io
-        .to(`user_${pid}`)
-        .emit("player_drew", { slot, count: drawn.length });
-    }
-
-    advanceTurn(gs, playerIds, 1);
     this.broadcastState(gameId, playerIds, gs, app);
-    broadcastTurn(playerIds, playerIds[gs.currentPlayerIndex]!, app);
-
-    this.gameLoggers
-      .get(gameId)
-      ?.log(userId, "DRAW_CARD", `Player drew ${drawn.length} card(s).`);
+    const nextId = playerIds[gs.currentPlayerIndex]!;
+    broadcastTurn(playerIds, nextId, app);
   }
 
   @OnSocketEvent("choose_color")
-  async handleChooseCard(socket: Socket, data: any, app: any) {
-    const { gameId, userId, color } = data as {
-      gameId: number;
-      userId: number;
-      color: string;
-    };
+  async handleChooseColor(socket: Socket, data: any, app: any) {
+    const { gameId, userId, color } = data;
 
     const gs = this.gameStates.get(gameId);
     const playerIds = this.gamePlayerIds.get(gameId);
-    if (!gs || !playerIds) return;
+    if (!gs || !playerIds) {
+      return socket.emit("error_message", { code: "NOT_FOUND", message: "Game not found" });
+    }
 
     this.activeColors.set(gameId, color);
 
-    advanceTurn(gs, playerIds, 1);
+    const logger = this.gameLoggers.get(gameId);
+    logger?.log(userId, "CHOOSE_COLOR", `Chose color: ${color}`);
 
     app.io.to(`${gameId}`).emit("color_chosen", { color });
 
-    this.broadcastState(gameId, playerIds, gs, app);
-    broadcastTurn(playerIds, playerIds[gs.currentPlayerIndex]!, app);
+    if (gs.isGameOver()) {
+      const r = gs.getResult();
+      const winnerId = r?.winner ?? -1;
+      const winnerNickname = this.playerNicknames.get(winnerId) ?? "";
+      app.io.to(`${gameId}`).emit("game_finished", { winnerId, winnerNickname });
+      logger?.system("GAME_FINISHED", `Winner: ${winnerNickname}`);
+      logger?.close();
+      this.cleanupGame(gameId);
+      return;
+    }
 
-    this.gameLoggers
-      .get(gameId)
-      ?.log(userId, "CHOOSE_COLOR", `Player chose ${color.toUpperCase()}.`);
+    this.broadcastState(gameId, playerIds, gs, app);
+    const nextId = playerIds[gs.currentPlayerIndex]!;
+    broadcastTurn(playerIds, nextId, app);
   }
 
   @OnSocketEvent("say_solo")
   async handleSaySolo(socket: Socket, data: any, app: any) {
-    const { gameId, userId } = data as { gameId: number; userId: number };
-
-    this.soloCalledBy.set(gameId, userId);
-
-    socket.to(`${gameId}`).emit("solo_called", { playerId: userId });
-
-    this.gameLoggers
-      .get(gameId)
-      ?.log(userId, "SAY_SOLO", `Player yelled SOLO!`);
-  }
-
-  @OnSocketEvent("catch_solo")
-  async handleSoloPunishment(socket: Socket, data: any, app: any) {
-    const { gameId, userId, slot } = data as {
-      gameId: number;
-      userId: number;
-      slot: Slot;
-    };
+    const { gameId, userId } = data;
 
     const gs = this.gameStates.get(gameId);
     const playerIds = this.gamePlayerIds.get(gameId);
     if (!gs || !playerIds) return;
 
+    const hand = (gs as any).playerHands.get(userId) as Card[] | undefined;
+    if (!hand || hand.length !== 1) return;
+
+    this.soloCalledBy.set(gameId, userId);
+
+    const logger = this.gameLoggers.get(gameId);
+    logger?.log(userId, "SAY_SOLO", `Player called SOLO`);
+
+    app.io.to(`${gameId}`).emit("say_solo", { userId });
+  }
+
+  @OnSocketEvent("catch_solo")
+  async handleCatchSolo(socket: Socket, data: any, app: any) {
+    const { gameId, userId, slot } = data;
+
+    const gs = this.gameStates.get(gameId);
+    const playerIds = this.gamePlayerIds.get(gameId);
+    if (!gs || !playerIds) return;
+
+    const soloPlayerId = this.soloCalledBy.get(gameId);
     const targetId = getTargetIdBySlot(playerIds, userId, slot);
-    if (!targetId) return;
 
-    const soloCallerId = this.soloCalledBy.get(gameId);
+    const logger = this.gameLoggers.get(gameId);
 
-    if (soloCallerId === targetId) {
-      const drawn = forceDrawCards(gs, userId, 2);
-      socket.emit("cards_drawn", { cards: drawn });
-      for (const pid of playerIds) {
-        if (pid === userId) continue;
-        const s = getSlot(playerIds, pid, userId) as Slot;
-        app.io
-          .to(`user_${pid}`)
-          .emit("player_drew", { slot: s, count: drawn.length });
-      }
-      this.gameLoggers
-        .get(gameId)
-        ?.log(
-          userId,
-          "CATCH_SOLO_FAIL",
-          `Player ${userId} tried to catch ${targetId} but they had called SOLO — catcher penalised.`,
-        );
+    if (!soloPlayerId || soloPlayerId !== targetId) {
+      forceDrawCards(gs, userId, 2);
+      logger?.log(userId, "CATCH_SOLO", `Bad catch — drew 2`);
     } else {
-      const drawn = forceDrawCards(gs, targetId, 2);
-      app.io.to(`user_${targetId}`).emit("cards_drawn", { cards: drawn });
-      for (const pid of playerIds) {
-        if (pid === targetId) continue;
-        const s = getSlot(playerIds, pid, targetId) as Slot;
-        app.io
-          .to(`user_${pid}`)
-          .emit("solo_catch_result", { slot: s, count: drawn.length });
-      }
-      this.gameLoggers
-        .get(gameId)
-        ?.log(
-          userId,
-          "CATCH_SOLO",
-          `Player ${userId} caught player ${targetId} without SOLO — target penalised.`,
-        );
+      forceDrawCards(gs, soloPlayerId, 2);
+      this.soloCalledBy.set(gameId, null);
+      logger?.log(userId, "CATCH_SOLO", `Caught player ${soloPlayerId} — they drew 2`);
     }
 
     this.broadcastState(gameId, playerIds, gs, app);

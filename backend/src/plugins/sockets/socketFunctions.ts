@@ -103,20 +103,20 @@ export function forceDrawCards(
 ): Card[] {
   const deck = (gs as any).deck as Card[];
   const hands = (gs as any).playerHands as Map<number, Card[]>;
-  const drawn = deck.splice(0, Math.min(count, deck.length));
-  const hand = hands.get(playerId) ?? [];
+  const hand = hands.get(playerId);
+  if (!hand) return [];
+  const drawn = deck.splice(0, count);
   hand.push(...drawn);
-  hands.set(playerId, hand);
   return drawn;
 }
 
 export function broadcastTurn(
   playerIds: number[],
-  nextId: number,
+  activeId: number,
   app: any,
 ): void {
   for (const pid of playerIds) {
-    const turn = getSlot(playerIds, pid, nextId);
+    const turn = pid === activeId ? "player" : getSlot(playerIds, pid, activeId);
     app.io.to(`user_${pid}`).emit("game_turn", { turn });
   }
 }

@@ -13,6 +13,5 @@ export class GameStateSnapshot {
     myHand: Card[] = [];
     currentPlayerId: number = 0;
     //playerCardCount (type Record number)
-    direction = 1 | -1;
-
+    direction: 1 | -1 = 1;
 }

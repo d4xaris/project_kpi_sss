@@ -66,13 +66,14 @@ export interface ServerToClient {
   player_drew: (data: { slot: Slot; count: number }) => void;
   color_chosen: (data: { color: string }) => void;
   game_finished: (data: { winnerId: number; winnerNickname: string }) => void;
-  solo_called: (data: { playerId: number }) => void;
-  solo_catch_result: (data: { slot: Slot; count: number }) => void;
   error_message: (data: { code?: string; message: string }) => void;
+  say_solo: (data: { userId: number }) => void;
+  catch_solo_result: (data: { caught: boolean; catcherId: number }) => void;
+  choose_color_prompt: (data: Record<string, never>) => void;
 }
 
 export interface SocketData {
-  nickname: string;
   userId: number;
+  nickname: string;
   gameId: number;
 }
