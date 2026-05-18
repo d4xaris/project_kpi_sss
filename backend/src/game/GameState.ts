@@ -158,4 +158,17 @@ export class GameState {
         }
         return null;
     }
+    getSnapshot(requestingPlayerId: number) {
+        const counts: Record<number, number> = {};
+        for (const [id, hand] of this.playerHands) {
+            counts[id] = hand.length;
+        }
+        return {
+            topCard: this.topCard,
+            currentPlayerId: this.playerIds[this.currentPlayerIndex],
+            direction: this.direction,
+            playerCardCounts: counts,
+            myHand: this.playerHands.get(requestingPlayerId) ?? [],
+        };
+    }
 }
