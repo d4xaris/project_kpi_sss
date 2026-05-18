@@ -1,6 +1,6 @@
 FROM node:20-alpine AS build
 WORKDIR /app
-COPY . .
+COPY frontend/ .
 RUN yarn install --frozen-lockfile && yarn build
 
 FROM node:20-alpine
