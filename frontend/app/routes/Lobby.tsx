@@ -1,17 +1,27 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import Button from "~/components/Button";
 import { useLobby } from "~/hooks/useLobby";
+import { useAuth } from "~/hooks/useAuth";
 import type { RoomSummary } from "~/hooks/useLobby";
 
 export default function Lobby() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { rooms, loading, refresh, joinRoom } = useLobby();
+  const [joiningId, setJoiningId] = useState<number | null>(null);
 
   const handleJoin = async (room: RoomSummary) => {
-    const ok = await joinRoom(room.id);
-    if (ok) navigate(`/room/${room.id}`, {
-      state: { roomName: room.sessionName, hostId: room.hostId, maxPlayers: room.maxPlayers },
-    });
+    if (joiningId !== null) return;
+    setJoiningId(room.id);
+    const ok = await joinRoom(room.id, user?.id ?? 0, user?.nickname ?? '');
+    if (ok) {
+      navigate(`/room/${room.id}`, {
+        state: { roomName: room.sessionName, hostId: room.hostId, maxPlayers: room.maxPlayers },
+      });
+    } else {
+      setJoiningId(null);
+    }
   };
 
   return (
@@ -32,10 +42,10 @@ export default function Lobby() {
               <span className="lobby-count">{room.playerCount}/{room.maxPlayers}</span>
               <button
                 className={`btn--solid lobby-join-btn ${full ? "lobby-join--full" : ""}`}
-                disabled={full}
+                disabled={full || joiningId !== null}
                 onClick={() => handleJoin(room)}
               >
-                {full ? "Full" : "Join"}
+                {joiningId === room.id ? "Joining..." : full ? "Full" : "Join"}
               </button>
             </div>
           );
