@@ -16,16 +16,17 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Production deps only
+# Production deps only (must come before COPY from build stages)
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-# Compiled JS
+# Compiled JS output
 COPY --from=build /app/dist ./dist
 
-# Prisma: migrations + generated client (compiled into dist/generated)
-COPY prisma ./prisma
-COPY prisma.config.ts ./prisma.config.ts
+# Prisma migrations (needed by migrate deploy at startup)
+COPY --from=build /app/prisma ./prisma
+
+# Generated Prisma client
 COPY --from=build /app/src/generated ./src/generated
 
 ENV NODE_ENV=production
