@@ -1,12 +1,12 @@
 import { apiFetch } from "./useAuth";
-
-const USE_MOCK = true;
+import { getSocket } from "~/socket/client";
 
 export function useGame() {
-
-  const createRoom = async (sessionName: string, maxPlayers: number): Promise<number | null> => {
-    if (USE_MOCK) return Math.floor(Math.random() * 9000) + 1000;
-    const res  = await apiFetch("/game/create", {
+  const createRoom = async (
+    sessionName: string,
+    maxPlayers: number,
+  ): Promise<number | null> => {
+    const res = await apiFetch("/game/create", {
       method: "POST",
       body: JSON.stringify({ sessionName, maxPlayers }),
     });
@@ -14,30 +14,23 @@ export function useGame() {
     return res.ok ? data.game.id : null;
   };
 
-  const leaveRoom = async (roomId: number, isHost: boolean): Promise<boolean> => {
-    if (USE_MOCK) {
-      if (isHost) {
-        // Simulate 'room:closed' broadcast to other mock players
-        const key = `sss:roomClosed:${roomId}`;
-        localStorage.setItem(key, "1");
-        window.dispatchEvent(new StorageEvent("storage", { key, newValue: "1" }));
-      }
-      return true;
-    }
+  const leaveRoom = async (roomId: number): Promise<boolean> => {
     const res = await apiFetch(`/game/${roomId}/leave`, { method: "POST" });
-    return res.ok;
+    if (!res.ok) return false;
+    const user = JSON.parse(localStorage.getItem("user") ?? "{}");
+    getSocket().emit("leave_room", {
+      gameId: roomId,
+      userId: user.id,
+      nickname: user.nickname,
+    });
+    return true;
   };
 
   const startGame = async (roomId: number): Promise<boolean> => {
-    if (USE_MOCK) {
-      // Simulate 'game:start' broadcast to other mock players
-      const key = `sss:start:${roomId}`;
-      localStorage.setItem(key, "1");
-      window.dispatchEvent(new StorageEvent("storage", { key, newValue: "1" }));
-      return true;
-    }
     const res = await apiFetch(`/game/${roomId}/start`, { method: "POST" });
-    return res.ok;
+    if (!res.ok) return false;
+    getSocket().emit("game_start_request", { gameId: roomId });
+    return true;
   };
 
   return { createRoom, leaveRoom, startGame };

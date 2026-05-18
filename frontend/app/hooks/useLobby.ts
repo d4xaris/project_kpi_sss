@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "./useAuth";
-
-const USE_MOCK = true;
+import { getSocket, connectSocket } from "~/socket/client";
 
 export interface RoomSummary {
   id: number;
@@ -11,34 +10,75 @@ export interface RoomSummary {
   hostId: number;
 }
 
-const MOCK_ROOMS: RoomSummary[] = [
-  { id: 1001, sessionName: "Cool Room",  playerCount: 2, maxPlayers: 4, hostId: 1 },
-  { id: 1002, sessionName: "Fast Game",  playerCount: 4, maxPlayers: 4, hostId: 2 },
-  { id: 1003, sessionName: "Chill Zone", playerCount: 1, maxPlayers: 3, hostId: 3 },
-];
-
 export function useLobby() {
-  const [rooms, setRooms]     = useState<RoomSummary[]>([]);
+  const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRooms = async () => {
     setLoading(true);
-    if (USE_MOCK) {
-      setRooms(MOCK_ROOMS);
-      setLoading(false);
-      return;
-    }
-    const res  = await apiFetch("/game/sessions");
+    const res = await apiFetch("/game/sessions");
     const data = await res.json();
-    if (res.ok) setRooms(data.rooms.filter((r: RoomSummary) => r.playerCount > 0));
+    if (res.ok)
+      setRooms(data.rooms.filter((r: RoomSummary) => r.playerCount > 0));
     setLoading(false);
   };
 
-  useEffect(() => { fetchRooms(); }, []);
+  useEffect(() => {
+    fetchRooms();
 
-  const joinRoom = async (roomId: number): Promise<boolean> => {
-    if (USE_MOCK) return true;
+    const socket = getSocket();
+    connectSocket();
+
+    socket.on(
+      "lobby_room_updated",
+      (data: { id: string; playerCount: number }) => {
+        setRooms((prev) =>
+          prev.map((r) =>
+            r.id === Number(data.id)
+              ? { ...r, playerCount: data.playerCount }
+              : r,
+          ),
+        );
+      },
+    );
+
+    socket.on("lobby_room_removed", (data: { id: string }) => {
+      setRooms((prev) => prev.filter((r) => r.id !== Number(data.id)));
+    });
+
+    socket.on("room_created", (data) => {
+      setRooms((prev) => [
+        ...prev,
+        {
+          id: Number(data.roomId),
+          sessionName: data.roomName,
+          playerCount: data.playerCount,
+          maxPlayers: data.maxPlayers,
+          hostId: 0,
+        },
+      ]);
+    });
+
+    return () => {
+      socket.off("lobby_room_updated");
+      socket.off("lobby_room_removed");
+      socket.off("room_created");
+    };
+  }, []);
+
+  const joinRoom = async (
+    roomId: number,
+    userId: number,
+    nickname: string,
+  ): Promise<boolean> => {
     const res = await apiFetch(`/game/${roomId}/join`, { method: "POST" });
+    if (!res.ok) return false;
+
+    getSocket().emit("join_room", {
+      gameId: roomId,
+      nickname: nickname,
+      userId: userId,
+    });
     return res.ok;
   };
 

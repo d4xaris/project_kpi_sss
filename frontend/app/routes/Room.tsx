@@ -3,73 +3,117 @@ import { useNavigate, useParams, useLocation } from "react-router";
 import Button from "~/components/Button";
 import { useAuth } from "~/hooks/useAuth";
 import { useGame } from "~/hooks/useGame";
+import { getSocket } from "~/socket/client";
 import { sounds } from "~/sounds";
 
-interface Player        { id: number; nickname: string }
-interface LocationState { roomName?: string; hostId?: number; maxPlayers?: number }
+interface Player {
+  id: number;
+  nickname: string;
+}
 
-// Flip to false once the real backend is running
-const IS_MOCK = true;
+interface LocationState {
+  roomName?: string;
+  hostId?: number;
+  maxPlayers?: number;
+}
 
 const Crown = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M2 19H22V21H2V19ZM2 17L5 8L9 13L12 5L15 13L19 8L22 17H2Z" fill="#FFD700"/>
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M2 19H22V21H2V19ZM2 17L5 8L9 13L12 5L15 13L19 8L22 17H2Z"
+      fill="#FFD700"
+    />
   </svg>
 );
 
 export default function Room() {
-  const navigate                 = useNavigate();
-  const { id }                   = useParams();
-  const { state }                = useLocation();
-  const { user }                 = useAuth();
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const { state } = useLocation();
+  const { user } = useAuth();
   const { startGame, leaveRoom } = useGame();
 
-  const { roomName = "Room", hostId = user?.id, maxPlayers = 4 } = (state as LocationState) ?? {};
+  const {
+    roomName = "Room",
+    hostId = user?.id,
+    maxPlayers = 4,
+  } = (state as LocationState) ?? {};
+
   const isHost = user?.id === hostId;
 
   const [players, setPlayers] = useState<Player[]>([]);
   const [closing, setClosing] = useState(false);
 
-  const canStart   = players.length >= 2;
-  const roomIsFull = players.length >= maxPlayers;
+  const canStart = players.length >= 2;
 
-  // MOCK ONLY: add a fake player so the host can test the start flow
-  const handleMockJoin = () => {
-    const mockNames = ['CoolPlayer123', 'LeftHandedKing', 'xX_UnoMaster_Xx'];
-    const next = mockNames[players.length - 1] ?? `Player ${players.length + 1}`;
-    setPlayers(prev => [...prev, { id: prev.length + 100, nickname: next }]);
-  };
-
-  // Seed the local player on mount
   useEffect(() => {
     if (user) setPlayers([{ id: user.id, nickname: user.nickname }]);
   }, [user]);
 
   useEffect(() => {
-    if (isHost) return;
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === `sss:start:${id}` && e.newValue === "1")
-        navigate("/game", { state: { fromRoom: true } });
-      if (e.key === `sss:roomClosed:${id}` && e.newValue === "1")
-        navigate("/lobby");
+    const socket = getSocket();
+
+    socket.on("current_players", (data: { players: Player[] }) => {
+      setPlayers(data.players);
+    });
+
+    socket.on("joined_player", (data: { id: string; nickname: string }) => {
+      setPlayers((prev) => {
+        if (prev.some((p) => String(p.id) === data.id)) return prev;
+        return [...prev, { id: Number(data.id), nickname: data.nickname }];
+      });
+    });
+
+    socket.on("player_left", (data: { socketId: string }) => {
+      setPlayers((prev) => prev.filter((p) => String(p.id) !== data.socketId));
+    });
+
+    socket.on("game_deleted", () => {
+      navigate("/lobby");
+    });
+
+    socket.on(
+      "game_start_settings",
+      (data: { sessionId: number; playerCount: number }) => {
+        setClosing(true);
+        setTimeout(
+          () =>
+            navigate("/game", {
+              state: {
+                fromRoom: true,
+                playerCount: data.playerCount,
+                sessionId: data.sessionId,
+              },
+            }),
+          750,
+        );
+      },
+    );
+
+    return () => {
+      socket.off("current_players");
+      socket.off("joined_player");
+      socket.off("player_left");
+      socket.off("game_deleted");
+      socket.off("game_start_settings");
     };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [id, isHost]);
+  }, [navigate]);
 
   const handleLeave = async () => {
-    await leaveRoom(Number(id), isHost);
+    await leaveRoom(Number(id));
     navigate("/lobby");
   };
 
   const handleStart = async () => {
     sounds.gameStart();
-    const ok = await startGame(Number(id));
-    if (!ok) return;
-    setClosing(true);
-    // sessionId will come from game:start socket event once sockets are wired;
-    // Number(id) is a placeholder so the prop threads through for now.
-    setTimeout(() => navigate("/game", { state: { fromRoom: true, playerCount: players.length, sessionId: Number(id) } }), 750);
+    if (!canStart) return;
+    startGame(Number(id));
   };
 
   return (
@@ -81,7 +125,13 @@ export default function Room() {
         {players.map((p) => (
           <div className="create-row" key={p.id}>
             <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ width: "24px", display: "flex", justifyContent: "center" }}>
+              <span
+                style={{
+                  width: "24px",
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
                 {p.id === hostId && <Crown />}
               </span>
               {p.nickname}
@@ -90,18 +140,15 @@ export default function Room() {
         ))}
 
         {!isHost && (
-          <p style={{ textAlign: "center", opacity: 0.6, marginTop: "12px", fontSize: "0.9rem" }}>
-            Waiting for host to start...
-          </p>
-        )}
-
-        {/* DEV ONLY — remove when sockets are wired */}
-        {IS_MOCK && isHost && !roomIsFull && (
           <p
-            onClick={handleMockJoin}
-            style={{ textAlign: "center", opacity: 0.45, marginTop: "8px", fontSize: "0.8rem", cursor: "pointer", userSelect: "none" }}
+            style={{
+              textAlign: "center",
+              opacity: 0.6,
+              marginTop: "12px",
+              fontSize: "0.9rem",
+            }}
           >
-            + simulate player join ({players.length}/{maxPlayers})
+            Waiting for host to start...
           </p>
         )}
 

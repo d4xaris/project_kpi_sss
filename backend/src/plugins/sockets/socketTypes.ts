@@ -1,5 +1,19 @@
 import type { Card } from "../../game/shared.js";
 
+export type Slot = "top" | "left" | "right";
+
+export interface GameStateSnapshot {
+  yourHand: Card[];
+  topCard: Card;
+  currentTurn: "player" | Slot;
+  direction: 1 | -1;
+  opponents: {
+    top?: { nickname: string; cardCount: number };
+    left?: { nickname: string; cardCount: number };
+    right?: { nickname: string; cardCount: number };
+  };
+}
+
 export interface ClientToServer {
   join_room: (data: {
     gameId: number;
@@ -13,52 +27,53 @@ export interface ClientToServer {
   }) => void;
   game_start_request: (data: { gameId: number }) => void;
   play_card: (data: { gameId: number; userId: number; card: Card }) => void;
-  draw_card: (data: {}) => void;
-  choose_color: (data: {}) => void;
-  say_solo: (data: {}) => void;
-  catch_solo: (data: {}) => void;
+  draw_card: (data: { gameId: number; userId: number }) => void;
+  choose_color: (data: {
+    gameId: number;
+    userId: number;
+    color: string;
+  }) => void;
+  say_solo: (data: { gameId: number; userId: number }) => void;
+  catch_solo: (data: { gameId: number; userId: number; slot: Slot }) => void;
 }
 
 export interface ServerToClient {
-  joined_player: (data: { id: string; nickname: string }) => void;
-  current_players: (players: any[]) => void;
-  error_message: (data: { code?: string; message: string }) => void;
-  player_left: (data: { socketId: string; nickname?: string }) => void;
-  game_deleted: () => void;
-  game_start_settings: (data: {
-    players: number[];
-    status: string;
-    gameSettings: {};
-  }) => void;
-  game_finished: (data: { winnerId: number }) => void;
+  // lobby
+  lobby_room_updated: (data: { id: string; playerCount: number }) => void;
+  lobby_room_removed: (data: { id: string }) => void;
   room_created: (data: {
     roomId: string;
     roomName: string;
     playerCount: number;
     maxPlayers: number;
   }) => void;
-  lobby_room_removed: (data: { id: string }) => void;
-  lobby_room_updated: (data: { id: string; playerCount: number }) => void;
-  card_played: (data: {
-    playerId: number;
-    card: Card;
-    topCard: Card;
-    currentPlayerIndex: number;
-    direction: 1 | -1;
+  // room
+  joined_player: (data: { id: string; nickname: string }) => void;
+  current_players: (players: any[]) => void;
+  player_left: (data: { socketId: string; nickname?: string }) => void;
+  game_deleted: () => void;
+  // navigation
+  game_start_settings: (data: {
+    sessionId: number;
+    playerCount: number;
   }) => void;
-  player_hand: (data: { cards: Card[] }) => void;
-  game_state: (data: {}) => void;
-  cards_drawn: (data: {}) => void;
-  player_drew: (data: {}) => void;
-  color_chosen: (data: {}) => void;
-  choose_color_prompt: (data: {}) => void;
-  turn_skipped: (data: {}) => void;
-  solo_called: (data: {}) => void;
-  solo_catch_result: (data: {}) => void;
+  // status
+  game_state: (snapshot: GameStateSnapshot) => void;
+  // in-game
+  game_turn: (data: { turn: "player" | Slot }) => void;
+  card_played: (data: { slot: Slot; card: Card }) => void;
+  cards_drawn: (data: { cards: Card[] }) => void;
+  player_drew: (data: { slot: Slot; count: number }) => void;
+  color_chosen: (data: { color: string }) => void;
+  game_finished: (data: { winnerId: number; winnerNickname: string }) => void;
+  error_message: (data: { code?: string; message: string }) => void;
+  say_solo: (data: { userId: number }) => void;
+  catch_solo_result: (data: { caught: boolean; catcherId: number }) => void;
+  choose_color_prompt: (data: Record<string, never>) => void;
 }
 
 export interface SocketData {
-  nickname: string;
   userId: number;
+  nickname: string;
   gameId: number;
 }
