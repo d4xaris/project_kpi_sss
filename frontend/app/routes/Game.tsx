@@ -55,15 +55,19 @@ export default function Game() {
     Partial<Record<Slot, string>>
   >({});
   const [flyingCard, setFlyingCard] = useState<Slot | null>(null);
+  const [drawBuffer, setDrawBuffer] = useState(0);
 
   const turnTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const pendingWildTurn = useRef<Card | null>(null);
 
-  const hasPlayableCard = hand.some((c) => {
-    if (c.color === "wild") return true;
-    if (activeWildColor) return c.color === activeWildColor;
-    return c.color === topCard.color || c.value === topCard.value;
-  });
+  // When a draw penalty is active, only +2/+4 cards are playable (for stacking)
+  const hasPlayableCard = drawBuffer > 0
+    ? hand.some((c) => c.value === "drawtwo" || c.value === "wild_draw4")
+    : hand.some((c) => {
+        if (c.color === "wild") return true;
+        if (activeWildColor) return c.color === activeWildColor;
+        return c.color === topCard.color || c.value === topCard.value;
+      });
 
   const { soloCalled, showSoloSplash, soloEffects, handleSolo, triggerSolo } =
     useSolo(hand.length);
@@ -117,6 +121,7 @@ export default function Game() {
       setHand(snapshot.yourHand.map((c: Card) => ({ ...c, uid: mkUid() })));
       setTopCard(snapshot.topCard);
       setCurrentTurn(snapshot.currentTurn);
+      setDrawBuffer(snapshot.drawBuffer ?? 0);
       setOppCounts({
         top: snapshot.opponents.top?.cardCount ?? 0,
         left: snapshot.opponents.left?.cardCount ?? 0,
@@ -185,6 +190,12 @@ export default function Game() {
     socket.on("solo_called", () => {
       triggerSolo();
     });
+
+    // Request fresh state in case we missed the initial broadcast during navigation
+    const u = JSON.parse(localStorage.getItem("user") ?? "{}");
+    if (sessionId && u.id) {
+      socket.emit("request_game_state", { gameId: sessionId, userId: u.id });
+    }
 
     return () => {
       socket.off("game_state");

@@ -70,6 +70,7 @@ export function buildSnapshot(
     topCard: gs.topCard,
     currentTurn: getSlot(playerIds, forPlayerId, currentId),
     direction: gs.direction as 1 | -1,
+    drawBuffer: (gs as any).drawBuffer as number,
     opponents,
   };
 }
