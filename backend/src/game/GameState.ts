@@ -1,6 +1,8 @@
 import {type ActionResult, type Card} from "./shared.js";
 import {canPlayCards} from "./rules.js";
-//import {Deck} from "./Deck.js";
+import {Deck} from "./Deck.js";
+import {type} from "node:os";
+
 
 
 export class GameState {
@@ -44,14 +46,30 @@ export class GameState {
         }
 
     };
-    // *turn_generator(player: number[]) {
-    // let currentIndex= 0;
-    // while (true) {
-    //     yield player[currentIndex];
-    // }
-    // }
+    private reshuffleDiscardIntoDeck() {
+        if (this.discard_deck.length === 0) {
+            this.discard_deck = this.deck;
+            this.discard_deck = [];
+
+        }
+    }
+    drawCards(playerId: number, count: number) {
+
+    }
+
      public playCard(playerIds: number,card: Card):ActionResult {
          const activePlayerId = this.playerIds[this.currentPlayerIndex];
+         if (this.drawBuffer > 0) {
+             if (card.value !== 'drawtwo' && card.value !== 'wild_draw4') {
+                 return {success: false, reason: 'CANNOT_PLAY_DRAW_CARD'};
+             }
+             if (this.topCard.value === 'wild_draw4'&& card.value === 'drawtwo'){
+                 return {success: false , reason:'CANNOT_OVERRIDE_DRAW4_WITH_DRAW2'}
+             }
+         }
+        if (this.drawBuffer === 0){
+            return {success: false, reason: 'DRAW_BUFFER_ACTIVE'};
+        }
          if (playerIds !== activePlayerId) {
              return {success: false, reason: 'NOT_YOUR_TURN'};
          }//first check
@@ -69,11 +87,35 @@ export class GameState {
          hand.splice(cardIndex, 1);
          this.discard_deck.push(this.topCard);
          this.topCard = card;
-         //this.applyCardEffect(card);
+         this.applyCardEffect(card);
          return {success: true};
      }
      private advanceTurn() {
          this.currentPlayerIndex = (this.currentPlayerIndex + this.direction + this.playerIds.length) % this.playerIds.length;
-
      }
+     private applyCardEffect(card: any) {
+         switch (card.value) {
+             case 'skip':
+                 this.advanceTurn()
+                 this.advanceTurn();
+                 break
+             case 'reverse':
+                 this.direction *= -1;
+                 this.advanceTurn()
+                 break
+             case 'drawtwo':
+                 this.drawBuffer += 2;
+                 this.advanceTurn()
+                 break
+             case 'wild_draw4':
+                    this.drawBuffer += 4;
+                    this.advanceTurn()
+                 break
+             case 'wild':
+
+                 break
+
+         }
+         }
+
 }
