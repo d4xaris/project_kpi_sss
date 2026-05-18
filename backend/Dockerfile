@@ -1,7 +1,11 @@
 # ── Stage 1: install all deps ─────────────────────────────────────────────────
 FROM node:20-alpine AS deps
 WORKDIR /app
+<<<<<<< HEAD
 COPY package.json package-lock.json ./
+=======
+COPY backend/package.json backend/package-lock.json ./
+>>>>>>> b6db2c15176ef699217740a203f672b85ded176d
 RUN npm ci --legacy-peer-deps
 
 # ── Stage 2: generate Prisma client + compile TypeScript ──────────────────────
@@ -15,7 +19,11 @@ RUN npm run build
 # ── Stage 3: production image ─────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
+<<<<<<< HEAD
 COPY package.json package-lock.json ./
+=======
+COPY backend/package.json backend/package-lock.json ./
+>>>>>>> b6db2c15176ef699217740a203f672b85ded176d
 RUN npm ci --omit=dev --legacy-peer-deps
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
