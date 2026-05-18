@@ -1,3 +1,8 @@
+/**
+ * X-10 Architecture Decision:
+ * Throughout GameState methods (like playCard, drawCards), we use result objects (ActionResult)
+ * instead of throwing exceptions. This ensures predictable error handling and smoother validation flow.
+ */
 import {type ActionResult, type Card} from "./shared.js";
 import {canPlayCards} from "./rules.js";
 import {Deck} from "./Deck.js";
