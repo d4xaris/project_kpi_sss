@@ -19,6 +19,7 @@ export class GameState {
     topCard: Card;
     //логіка стола і гравців
     constructor(ids: number[], startingCards: Card[]) {
+        // X-11: State is fully self-contained for rematches
         //все що пов'язано с картами и колодою карт
         this.deck = startingCards;
         this.discard_deck = [];
