@@ -59,6 +59,14 @@ export default function Room() {
   useEffect(() => {
     const socket = getSocket();
 
+    if (user) {
+      socket.emit("join_room", {
+        gameId: Number(id),
+        userId: user.id,
+        nickname: user.nickname,
+      });
+    }
+
     socket.on("current_players", (data: { players: Player[] }) => {
       setPlayers(data.players);
     });
@@ -103,7 +111,7 @@ export default function Room() {
       socket.off("game_deleted");
       socket.off("game_start_settings");
     };
-  }, [navigate]);
+  }, [navigate, user, id]);
 
   const handleLeave = async () => {
     await leaveRoom(Number(id));
