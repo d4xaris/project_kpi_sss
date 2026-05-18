@@ -74,7 +74,7 @@ async function refreshToken(): Promise<string | null> {
 
   refreshing = true;
   try {
-    const res = await fetch('/auth/refresh', {
+    const res = await fetch(`${API_BASE}/auth/refresh`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ token: localStorage.getItem('token') }),
