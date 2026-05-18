@@ -54,6 +54,7 @@ export default function Create() {
             text={loading ? "Creating..." : "Create"}
             variant="solid"
             onClick={handleCreate}
+            disabled={loading}
           />
         </div>
       </div>
