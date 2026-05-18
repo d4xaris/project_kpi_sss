@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { apiFetch, configureProxy } from "~/hooks/authProxy";
 
 interface User {
   id: number;
@@ -10,10 +11,13 @@ export function useAuth() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {-
-    // Анкомент - то для бета тесту акк
-     setUser({ id: 1, nickname: "TestUser67" });
-     setIsLoading(false);
+  useEffect(() => {
+    configureProxy({
+      strategy:      'jwt',
+      rateLimitRpm:  60,
+      enableLogging: true,
+      onTokenExpired: () => setUser(null),
+    });
 
     const token = localStorage.getItem("token");
     const savedUser = localStorage.getItem("user");
@@ -32,9 +36,8 @@ export function useAuth() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch("/auth/login", {
+      const res = await apiFetch("/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ login, password }),
       });
       const data = await res.json();
@@ -53,9 +56,8 @@ export function useAuth() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch("/auth/registration", {
+      const res = await apiFetch("/auth/registration", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ login, nickname, password }),
       });
       const data = await res.json();
@@ -87,10 +89,4 @@ export function useAuth() {
   };
 }
 
-export function authHeaders() {
-  const token = localStorage.getItem("token");
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
+export { apiFetch, configureProxy, withStrategy, getRequestLog } from "~/hooks/authProxy";

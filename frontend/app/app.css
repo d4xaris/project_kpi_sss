@@ -645,28 +645,667 @@ span {
   user-select: none;
 }
 
+.game-deck {
+  position: fixed;
+  top: 47%;
+  left: calc(50% - 220px);
+  transform: translateY(-50%);
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.game-deck--active {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.game-deck--active:hover {
+  transform: translateY(-50%) scale(1.05);
+}
+
+.game-deck::before,
+.game-deck::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('/cards/back.svg') center / contain no-repeat;
+  border-radius: 8px;
+}
+
+.game-deck::before {
+  transform: translate(6px, 0px);
+  z-index: -2;
+  filter: brightness(0.7);
+}
+
+.game-deck::after {
+  transform: translate(3px, 0px);
+  z-index: -1;
+  filter: brightness(0.85);
+}
+
+.game-top-card {
+  position: fixed;
+  top: 47%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  user-select: none;
+  animation: cardInCenter 0.4s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+  border-radius: 10px;
+  transition: box-shadow 0.4s ease;
+}
+
+
+
+@keyframes cardInCenter {
+  from { opacity: 0; transform: translate(-50%, calc(-50% - 24px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
 .game-hand {
   position: fixed;
-  bottom: 20px;
+  bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: -10px;
+  align-items: flex-end;
+  user-select: none;
+}
+
+/* Static hit zone — never transforms, so hover never flickers */
+.game-card-hit {
+  position: relative;
+  display: flex;
+  cursor: pointer;
+  transition: margin-left 0.3s ease;
 }
 
 .game-card {
-  width: 80px;
-  height: auto;
-  cursor: pointer;
-  transition: transform 0.15s;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-.game-card:hover {
-  transform: translateY(-16px);
+.game-card img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.game-card--hovered {
+  transform: translateY(-28px);
+  user-select: none;
+}
+
+/* ── Curtain intro ── */
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.curtain__left,
+.curtain__right {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  transition: transform 0.65s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.curtain__left {
+  left: 0;
+  background: linear-gradient(90deg, #9f00f5, #b87aff);
+  transform: translateX(-100%);
+}
+
+.curtain__right {
+  right: 0;
+  background: linear-gradient(90deg, #b87aff, #9ba5ff);
+  transform: translateX(100%);
+}
+
+.curtain__left--closing,
+.curtain__left--closed   { transform: translateX(0); }
+
+.curtain__right--closing,
+.curtain__right--closed  { transform: translateX(0); }
+
+.curtain__left--opening  { transform: translateX(-100%); }
+.curtain__right--opening { transform: translateX(100%); }
+
+/* ── Logo ── */
+.curtain__logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 480px;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  z-index: 1002;
+  pointer-events: none;
+  user-select: none;
+}
+
+.curtain__logo--visible {
+  animation:
+    logoAppear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+    logoFloat  3s ease-in-out 0.5s infinite;
+}
+
+.curtain__logo--hiding {
+  animation: logoHide 0.45s ease-in forwards;
+}
+
+@keyframes logoAppear {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.8);            }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1) translateY(0);}
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0);     }
+  50%       { transform: translate(-50%, -50%) translateY(-12px); }
+}
+
+@keyframes logoHide {
+  from { opacity: 1; transform: translate(-50%, -50%) translateY(0);    }
+  to   { opacity: 0; transform: translate(-50%, -50%) translateY(20px); }
+}
+
+/* ── Card deal-in animation ── */
+@keyframes dealCard {
+  from { opacity: 0; transform: translateY(50px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.game-card--dealing {
+  animation: dealCard 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ======= Opponent hands ======= */
+
+.opponent-hand {
+  position: fixed;
+  display: flex;
+  flex-direction: row;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Outer wrapper: owns position transitions — isolated from the deal animation */
+.opponent-card-fan {
+  display: flex;
+  transition: margin-left 0.3s ease, transform 0.3s ease;
+}
+
+/* Inner: deal animation target only — no transition so it never fights translateY */
+.opponent-card {
+  display: flex;
+}
+
+/* Top: drops straight down, no spin — clean and symmetrical */
+.opponent-hand--top .opponent-card {
+  animation: dealCardTop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes dealCardTop {
+  from { opacity: 0; transform: translateY(50px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Left: slides in with a counter-clockwise flip */
+.opponent-hand--left .opponent-card {
+  animation: dealCardLeft 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes dealCardLeft {
+  from { opacity: 0; transform: translateY(50px) rotate(0deg); }
+  to   { opacity: 1; transform: translateY(0)    rotate(0deg); }
+}
+
+/* Right: slides*/
+.opponent-hand--right .opponent-card {
+  animation: dealCardRight 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes dealCardRight {
+  from { opacity: 0; transform: translateY(50px) rotate(0deg); }
+  to   { opacity: 1; transform: translateY(0)    rotate(0deg); }
+}
+
+/* Top opponent: horizontally centred, cards flipped 180° */
+.opponent-hand--top {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg);
+}
+
+.opponent-hand--left {
+  top: 50%;
+  left: 80px;
+  transform: translateX(-50%) translateY(-50%) rotate(-90deg);
+}
+
+.opponent-hand--right {
+  top: 50%;
+  right: 80px;
+  transform: translateX(50%) translateY(-50%) rotate(90deg);
+}
+
+/* ── Opponent name labels ── */
+.opponent-name {
+  position: fixed;
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1rem;
+  color: #fff;
+  background: #9f00f5;
+  padding: 5px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 210px;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* centered under the top hand */
+.opponent-name--top {
+  top: 175px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+/* just right of the left hand's visible edge (center 80px + ~58px half-width + 16px gap) */
+.opponent-name--left {
+  top: 50%;
+  left: 155px;
+  transform: translateY(-50%);
+  text-align: left;
+}
+
+/* just left of the right hand's visible edge */
+.opponent-name--right {
+  top: 50%;
+  right: 155px;
+  transform: translateY(-50%);
+  text-align: right;
+}
+
+/* ── Active wild color label ── */
+.wild-color-label {
+  position: fixed;
+  top: 62%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1.15rem;
+  color: #fff;
+  padding: 6px 20px;
+  border-radius: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  animation: fadeIn 0.3s ease both;
+  z-index: 10;
+}
+
+/* ── Wild card colour picker ── */
+
+.color-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.75) 100%);
+  animation: fadeIn 0.2s ease both;
+}
+
+/* Title floats above the circle, doesn't affect its centering */
+.color-picker__title {
+  position: absolute;
+  top: calc(50% - 110px - 54px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1.1rem;
+  color: #fff;
+  background: #9f00f5;
+  padding: 8px 22px;
+  border-radius: 20px;
+  margin: 0;
+  letter-spacing: 0.06em;
+  animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.color-picker-backdrop--closing {
+  animation: fadeOut 0.25s ease both;
+  pointer-events: none;
+}
+
+/* Single circle, 220×220, split into 4 wedge buttons */
+.color-picker {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  filter: drop-shadow(0 8px 32px rgba(0,0,0,0.5));
+}
+
+.color-picker__btn {
+  position: absolute;
+  inset: 0;
+  background: var(--clr);
+  border: none;
+  cursor: pointer;
+  /* Only animate opacity so transform stays free for hover */
+  animation: popIn 0.3s ease both;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              filter 0.2s ease;
+}
+
+.color-picker__btn:hover {
+  filter: brightness(1.2);
+}
+
+/* SVG arc: M center L edge-point A radius 0 0 1 next-edge-point Z */
+.color-picker__btn--tl { clip-path: path('M 110 110 L 0 110   A 110 110 0 0 1 110 0   Z'); }
+.color-picker__btn--tr { clip-path: path('M 110 110 L 110 0   A 110 110 0 0 1 220 110  Z'); }
+.color-picker__btn--br { clip-path: path('M 110 110 L 220 110  A 110 110 0 0 1 110 220  Z'); }
+.color-picker__btn--bl { clip-path: path('M 110 110 L 110 220  A 110 110 0 0 1 0 110   Z'); }
+
+/* Each wedge pushes away from the centre on hover */
+.color-picker__btn--tl:hover { transform: translate(-10px, -10px); }
+.color-picker__btn--tr:hover { transform: translate( 10px, -10px); }
+.color-picker__btn--br:hover { transform: translate( 10px,  10px); }
+.color-picker__btn--bl:hover { transform: translate(-10px,  10px); }
+
+/* Staggered pop-in */
+.color-picker__btn:nth-child(1) { animation-delay:   0ms; }
+.color-picker__btn:nth-child(2) { animation-delay:  70ms; }
+.color-picker__btn:nth-child(3) { animation-delay: 140ms; }
+.color-picker__btn:nth-child(4) { animation-delay: 210ms; }
+
+@keyframes popIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── SOLO screen effects ── */
+.solo-effects {
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  pointer-events: none;
+}
+
+/* Crisp expanding ring — centered via margin, no translate in keyframes */
+.solo-flash {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: 200px;
+  height: 200px;
+  margin: -100px 0 0 -100px;
+  border-radius: 50%;
+  border: 5px solid #9f00f5;
+  background: transparent;
+  transform-origin: center center;
+  animation: soloFlash 0.55s ease-out both;
+}
+
+/* Second outer ring for depth */
+.solo-flash::after {
+  content: '';
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  border: 3px solid rgba(159, 0, 245, 0.4);
+  transform-origin: center center;
+  animation: soloFlashOuter 0.55s 0.06s ease-out both;
+}
+
+@keyframes soloFlash {
+  0%   { opacity: 1; transform: scale(0.05); }
+  50%  { opacity: 1; transform: scale(1);    }
+  100% { opacity: 0; transform: scale(2.4);  }
+}
+
+@keyframes soloFlashOuter {
+  0%   { opacity: 0.7; transform: scale(0.05); }
+  50%  { opacity: 0.7; transform: scale(1);    }
+  100% { opacity: 0;   transform: scale(2.8);  }
+}
+
+/* Colored sparkle particles — centered via margin so rotate() pivots from exact screen center */
+.solo-particle {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: var(--size);
+  height: var(--size);
+  margin-top: calc(var(--size) / -2);
+  margin-left: calc(var(--size) / -2);
+  border-radius: 2px;
+  background: var(--clr);
+  transform-origin: center center;
+  animation: soloParticle 1.5s cubic-bezier(0.2, 0.8, 0.4, 1) both;
+  animation-delay: var(--delay);
+}
+
+@keyframes soloParticle {
+  0%   { opacity: 1; transform: rotate(var(--angle)) translateY(0); }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--angle)) translateY(calc(-1 * var(--dist))); }
+}
+
+/* White confetti particles that burst behind the colored ones */
+.solo-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.solo-confetti-particle {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: var(--size);
+  height: var(--size);
+  margin-top: calc(var(--size) / -2);
+  margin-left: calc(var(--size) / -2);
+  border-radius: 2px;
+  background: #fff;
+  transform-origin: center center;
+  animation: soloConfetti 1.4s cubic-bezier(0.15, 0.8, 0.35, 1) var(--delay) both;
+}
+
+@keyframes soloConfetti {
+  0%   { opacity: 0.95; transform: rotate(var(--angle)) translateY(0) rotate(var(--rot)); }
+  75%  { opacity: 0.8; }
+  100% { opacity: 0;    transform: rotate(var(--angle)) translateY(calc(-1 * var(--dist))) rotate(calc(var(--rot) + 200deg)); }
+}
+
+/* ── SOLO splash ── */
+.solo-splash {
+  position: fixed;
+  top: 46%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  pointer-events: none;
+  z-index: 200;
+  animation: soloSplash 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes soloSplash {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  20%  { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  35%  { transform: translate(-50%, -50%) scale(1); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ── SOLO button ── */
+.solo-btn {
+  z-index: 100;
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1.4rem;
+  color: #fff;
+  background: #9f00f5;
+  border: none;
+  border-radius: 20px;
+  padding: 12px 28px;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  box-shadow: 0 4px 20px rgba(159, 0, 245, 0.5);
+  animation: soloAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+             soloPulse 1.2s ease-in-out infinite;
+  transition: background 0.2s ease;
+}
+
+.solo-btn:hover {
+  background: #b400ff;
+  transform: scale(1.07);
+}
+
+.solo-btn--called {
+  background: #444;
+  box-shadow: none;
+  animation: soloAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  cursor: default;
+  opacity: 0.6;
+}
+
+.solo-btn--called:hover {
+  background: #444;
+  transform: none;
+}
+
+@keyframes soloAppear {
+  from { opacity: 0; transform: scale(0.5) translateY(20px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0);    }
+}
+
+@keyframes soloPulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(159, 0, 245, 0.5); }
+  50%       { box-shadow: 0 4px 30px rgba(159, 0, 245, 0.85); }
+}
+
+/* ── Shared action button container (CATCH + SOLO) ── */
+.game-actions {
+  position: fixed;
+  bottom: 30px;
+  right: 36px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 100;
+}
+
+/* ── CATCH button ── */
+.catch-btn {
+  z-index: 100;
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1.1rem;
+  color: #fff;
+  background: #e05c00;
+  border: none;
+  border-radius: 16px;
+  padding: 10px 22px;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  box-shadow: 0 4px 18px rgba(224, 92, 0, 0.55);
+  animation: catchAppear 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+             catchPulse 0.9s ease-in-out 0.35s infinite;
+  transition: background 0.15s ease;
+}
+
+.catch-btn:hover { background: #ff6b00; }
+
+@keyframes catchAppear {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1);   }
+}
+
+@keyframes catchPulse {
+  0%, 100% { box-shadow: 0 4px 18px rgba(224, 92, 0, 0.55); }
+  50%       { box-shadow: 0 4px 28px rgba(224, 92, 0, 0.9);  }
+}
+
+
+/* ── CATCH effect overlay ── */
+.catch-effect {
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  pointer-events: none;
+}
+
+.catch-effect__ring {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  margin-left: -90px;
+  margin-top: -90px;
+  border: 5px solid #e05c00;
+  background: transparent;
+  animation: catchRing 0.55s ease-out both;
+}
+
+.catch-effect__ring--outer {
+  width: 240px;
+  height: 240px;
+  margin-left: -120px;
+  margin-top: -120px;
+  border-color: rgba(224, 92, 0, 0.4);
+  border-width: 3px;
+  animation: catchRing 0.55s 0.07s ease-out both;
+}
+
+@keyframes catchRing {
+  0%   { opacity: 1; transform: scale(0.05); }
+  50%  { opacity: 1; transform: scale(1);    }
+  100% { opacity: 0; transform: scale(2.2);  }
+}
+
+.catch-effect__splash {
+  position: fixed;
+  top: 46%;
+  left: 50%;
+  width: 600px;
+  pointer-events: none;
+  animation: catchSplash 1.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes catchSplash {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.35) rotate(-8deg); }
+  18%  { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(2deg);  }
+  32%  { transform: translate(-50%, -50%) scale(1)    rotate(0deg); }
+  78%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05) rotate(0deg); }
 }
 
 /* ================================ АНІМАШКИ УРААААА ================================= */
-/* ======= Button animations ======= */
 
 .btn--solid {
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
@@ -726,3 +1365,131 @@ span {
 .lobby-row:nth-child(2) { animation: fadeSlideUp 0.5s 0.2s cubic-bezier(0.4, 0, 0.2, 1) both; }
 .lobby-row:nth-child(3) { animation: fadeSlideUp 0.5s 0.3s cubic-bezier(0.4, 0, 0.2, 1) both; }
 .lobby-row:nth-child(4) { animation: fadeSlideUp 0.5s 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+/* ======= Win Screen ======= */
+
+.win-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Same gradient as the app body */
+  background: linear-gradient(var(--bg-angle, 90deg), #9f00f5, #9ba5ff);
+  animation: winFadeIn 0.45s ease both;
+}
+
+@keyframes winFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.win-screen--exiting {
+  pointer-events: none;
+}
+
+.win-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0;
+  animation: winContentPop 0.55s 0.1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes winContentPop {
+  from { opacity: 0; transform: scale(0.85) translateY(20px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+.win-nickname {
+  font-family: "Hammersmith One", sans-serif;
+  font-size: clamp(2rem, 4.5vw, 4rem);
+  color: #fff;
+  margin: 0;
+  line-height: 1.1;
+  user-select: none;
+}
+
+.win-won {
+  font-family: "Hammersmith One", sans-serif;
+  font-size: clamp(2rem, 4.5vw, 4rem);
+  margin: 0 0 40px;
+  line-height: 1.1;
+  user-select: none;
+  /* Solid light lavender — clearly visible and glowing */
+  color: #c77dff;
+  text-shadow:
+    0 0 18px rgba(159, 0, 245, 1),
+    0 0 40px rgba(159, 0, 245, 0.7),
+    0 0 80px rgba(159, 0, 245, 0.4);
+  animation: winGlow 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes winGlow {
+  from {
+    text-shadow:
+      0 0 18px rgba(159, 0, 245, 1),
+      0 0 40px rgba(159, 0, 245, 0.7),
+      0 0 80px rgba(159, 0, 245, 0.4);
+  }
+  to {
+    text-shadow:
+      0 0 28px rgba(159, 0, 245, 1),
+      0 0 60px rgba(159, 0, 245, 0.85),
+      0 0 110px rgba(159, 0, 245, 0.5);
+  }
+}
+
+.win-home-btn {
+  font-size: 1rem !important;
+  padding: 12px 36px !important;
+  font-weight: 700 !important;
+  animation: winBtnPop 0.4s 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes winBtnPop {
+  from { opacity: 0; transform: scale(0.75); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+/* ======= Troll Screen ======= */
+
+.troll-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+}
+
+.troll-text {
+  position: absolute;
+  top: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  font-family: "Hammersmith One", sans-serif;
+  font-size: clamp(3rem, 8vw, 7rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  margin: 0;
+  white-space: nowrap;
+  background: linear-gradient(90deg, #ff6b6b, #ffd700, #a8ff78, #5ce1e6, #9b59b6, #ff6b6b);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rainbow 1.5s linear infinite;
+  user-select: none;
+}
+
+.troll-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

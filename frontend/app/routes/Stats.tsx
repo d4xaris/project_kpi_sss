@@ -1,16 +1,28 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import Button from "~/components/Button";
-import { useAuth } from "~/hooks/useAuth";
+import { useAuth, apiFetch } from "~/hooks/useAuth";
 
-// Mock stats — replace with real API call later
-const MOCK_STATS = {
-  gamesPlayed: 100,
-  gamesWon: 67,
-};
+interface Stats {
+  gamesPlayed: number;
+  gamesWon: number;
+}
 
 export default function Stats() {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch("/auth/me")
+      .then(r => r.json())
+      .then(data => setStats({ gamesPlayed: data.user.gamesPlayed, gamesWon: data.user.totalWins }))
+      .catch(() => setStats(null))
+      .finally(() => setStatsLoading(false));
+  }, []);
+
+  const loading = isLoading || statsLoading;
 
   return (
     <div className="settings">
@@ -21,12 +33,12 @@ export default function Stats() {
 
         <div className="settings-row">
           <span>Games Played</span>
-          <span>{MOCK_STATS.gamesPlayed}</span>
+          <span>{loading ? "—" : (stats?.gamesPlayed ?? 0)}</span>
         </div>
 
         <div className="settings-row">
           <span>Games Won</span>
-          <span className="stat-wins">{MOCK_STATS.gamesWon}</span>
+          <span className="stat-wins">{loading ? "—" : (stats?.gamesWon ?? 0)}</span>
         </div>
 
         <div className="settings-actions">
