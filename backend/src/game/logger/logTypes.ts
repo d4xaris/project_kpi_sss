@@ -8,6 +8,7 @@ export type LogAction =
   | "CHOOSE_COLOR"
   | "SAY_SOLO"
   | "CATCH_SOLO"
+  | "CATCH_SOLO_FAIL"
   | "VICTORY"
   | "PLAYER_JOINED"
   | "PLAYER_LEFT";

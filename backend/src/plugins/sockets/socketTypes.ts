@@ -27,10 +27,14 @@ export interface ClientToServer {
   }) => void;
   game_start_request: (data: { gameId: number }) => void;
   play_card: (data: { gameId: number; userId: number; card: Card }) => void;
-  draw_card: (data: {}) => void;
-  choose_color: (data: {}) => void;
-  say_solo: (data: {}) => void;
-  catch_solo: (data: {}) => void;
+  draw_card: (data: { gameId: number; userId: number }) => void;
+  choose_color: (data: {
+    gameId: number;
+    userId: number;
+    color: string;
+  }) => void;
+  say_solo: (data: { gameId: number; userId: number }) => void;
+  catch_solo: (data: { gameId: number; userId: number; slot: Slot }) => void;
 }
 
 export interface ServerToClient {
@@ -58,12 +62,12 @@ export interface ServerToClient {
   // in-game
   game_turn: (data: { turn: "player" | Slot }) => void;
   card_played: (data: { slot: Slot; card: Card }) => void;
-  cards_drawn: (data: {}) => void;
-  player_drew: (data: {}) => void;
-  color_chosen: (data: {}) => void;
-  game_finished: (data: { winnerId: number }) => void;
-  solo_called: (data: {}) => void;
-  solo_catch_result: (data: {}) => void;
+  cards_drawn: (data: { cards: Card[] }) => void;
+  player_drew: (data: { slot: Slot; count: number }) => void;
+  color_chosen: (data: { color: string }) => void;
+  game_finished: (data: { winnerId: number; winnerNickname: string }) => void;
+  solo_called: (data: { playerId: number }) => void;
+  solo_catch_result: (data: { slot: Slot; count: number }) => void;
   error_message: (data: { code?: string; message: string }) => void;
 }
 

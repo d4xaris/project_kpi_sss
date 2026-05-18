@@ -10,14 +10,12 @@ interface Player {
   id: number;
   nickname: string;
 }
+
 interface LocationState {
   roomName?: string;
   hostId?: number;
   maxPlayers?: number;
 }
-
-// Flip to false once the real backend is running
-const IS_MOCK = false;
 
 const Crown = () => (
   <svg
@@ -46,22 +44,14 @@ export default function Room() {
     hostId = user?.id,
     maxPlayers = 4,
   } = (state as LocationState) ?? {};
+
   const isHost = user?.id === hostId;
 
   const [players, setPlayers] = useState<Player[]>([]);
   const [closing, setClosing] = useState(false);
 
   const canStart = players.length >= 2;
-  const roomIsFull = players.length >= maxPlayers;
 
-  // MOCK ONLY: add a fake player so the host can test the start flow
-  // const handleMockJoin = () => {
-  //   const mockNames = ['CoolPlayer123', 'LeftHandedKing', 'xX_UnoMaster_Xx'];
-  //   const next = mockNames[players.length - 1] ?? `Player ${players.length + 1}`;
-  //   setPlayers(prev => [...prev, { id: prev.length + 100, nickname: next }]);
-  // };
-
-  // Seed the local player on mount
   useEffect(() => {
     if (user) setPlayers([{ id: user.id, nickname: user.nickname }]);
   }, [user]);
@@ -161,15 +151,6 @@ export default function Room() {
             Waiting for host to start...
           </p>
         )}
-
-        {/* {IS_MOCK && isHost && !roomIsFull && (
-          <p
-            onClick={handleMockJoin}
-            style={{ textAlign: "center", opacity: 0.45, marginTop: "8px", fontSize: "0.8rem", cursor: "pointer", userSelect: "none" }}
-          >
-            + simulate player join ({players.length}/{maxPlayers})
-          </p>
-        )}  */}
 
         <div className="create-actions">
           <Button text="Leave" variant="underline" onClick={handleLeave} />

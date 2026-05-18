@@ -18,6 +18,29 @@ export function getSlot(
   return "right";
 }
 
+export function getTargetIdBySlot(
+  playerIds: number[],
+  viewerId: number,
+  slot: Slot,
+): number | undefined {
+  const count = playerIds.length;
+  const viewerIdx = playerIds.indexOf(viewerId);
+  if (viewerIdx === -1) return undefined;
+
+  let offset: number;
+  if (count === 2) {
+    offset = 1;
+  } else if (count === 3) {
+    offset = slot === "top" ? 1 : 2;
+  } else {
+    if (slot === "left") offset = 1;
+    else if (slot === "top") offset = 2;
+    else offset = 3;
+  }
+
+  return playerIds[(viewerIdx + offset) % count];
+}
+
 export function buildSnapshot(
   gs: GameState,
   playerIds: number[],
