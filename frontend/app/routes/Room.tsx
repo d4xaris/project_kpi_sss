@@ -67,8 +67,8 @@ export default function Room() {
       });
     }
 
-    socket.on("current_players", (data: { players: Player[] }) => {
-      setPlayers(data.players);
+    socket.on("current_players", (data: Player[]) => {
+      setPlayers(data);
     });
 
     socket.on("joined_player", (data: { id: string; nickname: string }) => {
