@@ -26,6 +26,8 @@
 👥 **Made by**  
 [@d4xaris](https://github.com/d4xaris) · [@Honike-1](https://github.com/Honike-1) · [@X0nexed](https://github.com/X0nexed)
 
+### Project SSS is a real-time multiplayer card game inspired by UNO. Create a room, invite friends, play cards, survive the chaos. Built with Fastify, Socket.IO, React, and PostgreSQL. Also has a troll card. You'll see.
+
 </div>
 
 ---
@@ -108,11 +110,265 @@ For example:
 ```
 
 ## Lab 2. Project Setup · [@d4xaris](https://github.com/d4xaris) 
+```bash
+project_kpi_sss
+├── README.md                                                                                                                    
+├── backend                                                                                  
+│   ├── package-lock.json                                                  
+│   ├── package.json                                                                     
+│   ├── prisma                                                                                                                       
+│   │   ├── migrations                                              
+│   │   │   └── migration_lock.toml                                               
+│   │   │                               
+│   │   ├── schema.prisma                                                                
+│   │   └── seed.ts                                                  
+│   ├── prisma.config.ts                                    
+│   ├── src
+│   │   ├── game                                                   
+│   │   │   ├── Deck.ts                                             
+│   │   │   ├── GameRoom.ts
+│   │   │   ├── BiDiPriorityQueue.ts
+│   │   │   ├── memo.ts                                        
+│   │   │   ├── GameState.ts                       
+│   │   │   ├── logger
+│   │   │   ├── rules.ts
+│   │   │   └── shared.ts
+│   │   ├── generated
+│   │   │   └── prisma
+│   │   ├── index.ts
+│   │   ├── plugins
+│   │   │   ├── cors.ts
+│   │   │   ├── errorHandler.ts
+│   │   │   ├── jwt.ts
+│   │   │   ├── prisma.ts
+│   │   │   ├── socket.ts
+│   │   │   └── sockets
+│   │   └── routes
+│   │       ├── auth.ts
+│   │       └── game.ts
+│   ├── tsconfig.json
+│   └── yarn.lock
+└── frontend
+    ├── Dockerfile
+    ├── app
+    │   ├── Layout.tsx
+    │   ├── app.css
+    │   ├── components
+    │   │   ├── Button.tsx
+    │   │   ├── CatchEffect.tsx
+    │   │   ├── ColorPicker.tsx
+    │   │   ├── FlyingCard.tsx
+    │   │   ├── GameActions.tsx
+    │   │   ├── GameCurtain.tsx
+    │   │   ├── HowToPlayCard.tsx
+    │   │   ├── OpponentHand.tsx
+    │   │   ├── OpponentLayout.tsx
+    │   │   ├── PlayerHand.tsx
+    │   │   ├── ProtectedRoute.tsx
+    │   │   ├── SSSCard.tsx
+    │   │   ├── Slider.tsx
+    │   │   ├── SoloEffects.tsx
+    │   │   ├── TableCenter.tsx
+    │   │   ├── TrollScreen.tsx
+    │   │   └── WinScreen.tsx
+    │   ├── hooks
+    │   │   ├── authProxy.ts
+    │   │   ├── useAuth.ts
+    │   │   ├── useCatch.ts
+    │   │   ├── useGame.ts
+    │   │   ├── useLobby.ts
+    │   │   ├── useSolo.ts
+    │   │   └── useSounds.ts
+    │   ├── mockData.ts
+    │   ├── root.tsx
+    │   ├── routes
+    │   │   ├── Create.tsx
+    │   │   ├── Game.tsx
+    │   │   ├── HowToPlay.tsx
+    │   │   ├── Lobby.tsx
+    │   │   ├── Login.tsx
+    │   │   ├── NotFound.tsx
+    │   │   ├── Play.tsx
+    │   │   ├── Room.tsx
+    │   │   ├── Settings.tsx
+    │   │   ├── Stats.tsx
+    │   │   └── home.tsx
+    │   ├── routes.ts
+    │   ├── socket
+    │   │   └── client.ts
+    │   ├── sounds.ts
+    │   └── types
+    │       └── game.ts
+    ├── package.json
+    ├── public
+    │   ├── cards
+    │   │   ├── back.svg
+    │   │   ├── crimson_0.svg
+    │   │   ├── crimson_1.svg
+    │   │   ├── crimson_2.svg
+    │   │   ├── crimson_3.svg
+    │   │   ├── crimson_4.svg
+    │   │   ├── crimson_5.svg
+    │   │   ├── crimson_6.svg
+    │   │   ├── crimson_7.svg
+    │   │   ├── crimson_8.svg
+    │   │   ├── crimson_9.svg
+    │   │   ├── crimson_drawtwo.svg
+    │   │   ├── crimson_reverse.svg
+    │   │   ├── crimson_skip.svg
+    │   │   ├── orange_0.svg
+    │   │   ├── orange_1.svg
+    │   │   ├── orange_2.svg
+    │   │   ├── orange_3.svg
+    │   │   ├── orange_4.svg
+    │   │   ├── orange_5.svg
+    │   │   ├── orange_6.svg
+    │   │   ├── orange_7.svg
+    │   │   ├── orange_8.svg
+    │   │   ├── orange_9.svg
+    │   │   ├── orange_drawtwo.svg
+    │   │   ├── orange_reverse.svg
+    │   │   ├── orange_skip.svg
+    │   │   ├── purple_0.svg
+    │   │   ├── purple_1.svg
+    │   │   ├── purple_2.svg
+    │   │   ├── purple_3.svg
+    │   │   ├── purple_4.svg
+    │   │   ├── purple_5.svg
+    │   │   ├── purple_6.svg
+    │   │   ├── purple_7.svg
+    │   │   ├── purple_8.svg
+    │   │   ├── purple_9.svg
+    │   │   ├── purple_drawtwo.svg
+    │   │   ├── purple_reverse.svg
+    │   │   ├── purple_skip.svg
+    │   │   ├── troll.svg
+    │   │   ├── wild.svg
+    │   │   ├── wild_draw4.svg
+    │   │   ├── yellow_0.svg
+    │   │   ├── yellow_1.svg
+    │   │   ├── yellow_2.svg
+    │   │   ├── yellow_3.svg
+    │   │   ├── yellow_4.svg
+    │   │   ├── yellow_5.svg
+    │   │   ├── yellow_6.svg
+    │   │   ├── yellow_7.svg
+    │   │   ├── yellow_8.svg
+    │   │   ├── yellow_9.svg
+    │   │   ├── yellow_drawtwo.svg
+    │   │   ├── yellow_reverse.svg
+    │   │   └── yellow_skip.svg
+    │   ├── catch.png
+    │   ├── favicon.png
+    │   ├── project_sss.png
+    │   ├── shreked.mp4
+    │   ├── solo.svg
+    │   ├── sounds
+    │   │   ├── catchsound.mp3
+    │   │   ├── click.mp3
+    │   │   ├── gamestart.mp3
+    │   │   ├── solosound.mp3
+    │   │   └── start.mp3
+    │   └── table.jpg
+    ├── react-router.config.ts
+    ├── tsconfig.json
+    ├── vite.config.ts
+    └── yarn.lock
+```
+## Lab 3. Implementing a Memoization Function · [@Honike-1](https://github.com/Honike-1)
+For example: 
+**[backend\src\game\memo.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/game/memo.ts#L1-L22)**
+```bash
+class QNode<T> { constructor(public value: T, public next: QNode<T> | null = null) {} }
 
-## Lab 3. Implementing a Memoization Function ·
+class Queue<T> {
+  private head: QNode<T> | null = null;
+  private tail: QNode<T> | null = null;
+  size = 0;
 
-## Lab 4. Implementing a Bi-Directional Priority Queue ·
+  enqueue(v: T): void {
+    const n = new QNode(v);
+    this.tail ? (this.tail.next = n) : (this.head = n);
+    this.tail = n;
+    this.size++;
+  }
 
+  dequeue(): T | undefined {
+    if (!this.head) return undefined;
+    const v = this.head.value;
+    this.head = this.head.next;
+    if (!this.head) this.tail = null;
+    this.size--;
+    return v;
+  }
+```
+**[backend\src\game\rules.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/game/rules.ts#L1-L11)**
+```bash
+import { type Card } from "./shared.js";
+import { memoize } from "./memo.js";
+
+function _canPlayCards(topCard: Card, hand: Card): boolean {
+    if (hand.color === topCard.color) return true;
+    if (hand.color === "wild") return true;
+    if (hand.value === topCard.value) return true;
+    return false;
+}
+
+export const canPlayCards = memoize(_canPlayCards, { maxSize: 512, policy: 'lru' });
+```
+## Lab 4. Implementing a Bi-Directional Priority Queue · [@Honike-1](https://github.com/Honike-1)
+For example: 
+**[backend\src\game\BiDiPriorityQueue.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/game/BiDiPriorityQueue.ts#L17-L46)**
+```bash
+  enqueue(value: T, priority: number): void {
+    this.items.push({ value, priority, insertedAt: this.counter++ });
+  }
+
+  peek(mode: Mode): T | undefined {
+    if (this.isEmpty) return undefined;
+    return this.items[this.findIndex(mode)]!.value;
+  }
+
+  dequeue(mode: Mode): T | undefined {
+    if (this.isEmpty) return undefined;
+    const idx = this.findIndex(mode);
+    const [entry] = this.items.splice(idx, 1);
+    return entry!.value;
+  }
+
+  private findIndex(mode: Mode): number {
+    let target = 0;
+    for (let i = 1; i < this.items.length; i++) {
+      const curr = this.items[i]!;
+      const best = this.items[target]!;
+      switch (mode) {
+        case 'highest': if (curr.priority   > best.priority)   target = i; break;
+        case 'lowest':  if (curr.priority   < best.priority)   target = i; break;
+        case 'oldest':  if (curr.insertedAt < best.insertedAt) target = i; break;
+        case 'newest':  if (curr.insertedAt > best.insertedAt) target = i; break;
+      }
+    }
+    return target;
+  }
+```
+**[backend\src\game\GameRoom.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/game/GameRoom.ts#L18-L31)**
+```bash
+  pushDrawAction(targetId: number, amount: number): void {
+    this.actionQueue.enqueue({ type: 'draw', targetId, amount }, amount);
+  }
+
+  resolveNext(): PendingAction | undefined {
+    return this.actionQueue.dequeue('highest');
+  }
+
+  peekLowest(): PendingAction | undefined {
+    return this.actionQueue.peek('lowest');
+  }
+
+  peekOldest(): PendingAction | undefined {
+    return this.actionQueue.peek('oldest');
+  }
+```
 ## Lab 5. Async Array Function Variants · [@Honike-1](https://github.com/Honike-1)
 For example:
 **[backend\src\routes\auth.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/routes/auth.ts#L29-L66)**
