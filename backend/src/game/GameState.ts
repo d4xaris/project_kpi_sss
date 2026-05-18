@@ -92,7 +92,7 @@ export class GameState {
          if (cardIndex === -1) {
              return { success: false, reason: 'CARD_NOT_IN_HAND' };
          }
-         if (!canPlayCards(card, this.topCard)) {
+         if (!canPlayCards(this.topCard, card)) {
              return {success: false, reason: 'INVALID_CARD'};
          }
          hand.splice(cardIndex, 1);
@@ -123,6 +123,7 @@ export class GameState {
                     this.advanceTurn()
                  break
              case 'wild':
+                 this.advanceTurn();
                  break;
              default:
                  this.advanceTurn();
