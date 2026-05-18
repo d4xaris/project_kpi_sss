@@ -59,5 +59,4 @@ export class Deck {
 // const discard = myDeck.getCards().splice(0, 100);
 // const drawCards = myDeck.draw(5);
 // console.table(discard);
-// console.log(myDeck);
-// console.log(drawCards);
+// console.log(myDeck)
