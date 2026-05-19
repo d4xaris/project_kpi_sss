@@ -32,7 +32,10 @@ export default function OpponentLayout({
             count={cardCounts[pos]}
             isActive={activeTurn === pos}
           />
-          <div className={`opponent-name opponent-name--${pos}`}>
+          <div className={[
+            `opponent-name opponent-name--${pos}`,
+            activeTurn === pos ? 'opponent-name--active' : '',
+          ].join(' ').trim()}>
             {opponents[pos] ?? '?'}
           </div>
         </span>

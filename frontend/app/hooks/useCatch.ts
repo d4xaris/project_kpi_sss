@@ -8,6 +8,7 @@ interface UseCatchReturn {
   showCatchEffect:  boolean;
   handleCatch:      (slot: Slot) => void;
   triggerForSlot:   (slot: Slot) => void;
+  catchLocked:      boolean;
 }
 
 export function useCatch(
@@ -16,10 +17,13 @@ export function useCatch(
 ): UseCatchReturn {
   const [catchTarget,     setCatchTarget]     = useState<Slot | null>(null);
   const [showCatchEffect, setShowCatchEffect] = useState(false);
+  const [catchLocked,     setCatchLocked]     = useState(false);
 
-  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const effectTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevRef      = useRef({ ...oppCounts });
+  const timerRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const effectTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lockTimer       = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const catchLockedRef  = useRef(false);
+  const prevRef         = useRef({ ...oppCounts });
 
   useEffect(() => {
     const prev = prevRef.current;
@@ -36,6 +40,7 @@ export function useCatch(
   useEffect(() => () => {
     if (timerRef.current)    clearTimeout(timerRef.current);
     if (effectTimer.current) clearTimeout(effectTimer.current);
+    if (lockTimer.current)   clearTimeout(lockTimer.current);
   }, []);
 
   const triggerForSlot = (slot: Slot) => {
@@ -45,6 +50,16 @@ export function useCatch(
   };
 
   const handleCatch = (slot: Slot) => {
+    // Debounce — ignore rapid taps (frontend guard against spam)
+    if (catchLockedRef.current) return;
+    catchLockedRef.current = true;
+    setCatchLocked(true);
+    if (lockTimer.current) clearTimeout(lockTimer.current);
+    lockTimer.current = setTimeout(() => {
+      catchLockedRef.current = false;
+      setCatchLocked(false);
+    }, 3000);
+
     if (timerRef.current) clearTimeout(timerRef.current);
     setCatchTarget(null);
 
@@ -56,5 +71,5 @@ export function useCatch(
     onCatch(slot);
   };
 
-  return { catchTarget, showCatchEffect, handleCatch, triggerForSlot };
+  return { catchTarget, showCatchEffect, handleCatch, triggerForSlot, catchLocked };
 }

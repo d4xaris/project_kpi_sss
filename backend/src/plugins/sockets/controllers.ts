@@ -21,9 +21,11 @@ export class GameController {
   private playerNicknames = new Map<number, string>();
   private gameLoggers  = new Map<number, GameLogger>();
   private activeColors = new Map<number, string>();
-  private soloCalledBy = new Map<number, number | null>();
+  private soloCalledBy   = new Map<number, number | null>();
   // key: `${gameId}_${userId}` — clears when solo is called or hand changes
-  private soloTimers   = new Map<string, ReturnType<typeof setTimeout>>();
+  private soloTimers     = new Map<string, ReturnType<typeof setTimeout>>();
+  // key: `${gameId}_${userId}` — timestamp of last accepted catch attempt
+  private catchCooldowns = new Map<string, number>();
 
   private startSoloTimer(gameId: number, userId: number, gs: GameState, playerIds: number[], app: any) {
     const key = `${gameId}_${userId}`;
@@ -74,11 +76,16 @@ export class GameController {
     this.gamePlayerIds.delete(gameId);
     this.activeColors.delete(gameId);
     this.soloCalledBy.delete(gameId);
-    // Clear any pending solo timers for this game
+    // Clear any pending solo timers and catch cooldowns for this game
     for (const key of [...this.soloTimers.keys()]) {
       if (key.startsWith(`${gameId}_`)) {
         clearTimeout(this.soloTimers.get(key)!);
         this.soloTimers.delete(key);
+      }
+    }
+    for (const key of [...this.catchCooldowns.keys()]) {
+      if (key.startsWith(`${gameId}_`)) {
+        this.catchCooldowns.delete(key);
       }
     }
   }
@@ -508,6 +515,12 @@ export class GameController {
     const playerIds = this.gamePlayerIds.get(gameId);
     if (!gs || !playerIds) return;
 
+    // Debounce: reject repeated catch attempts within 2 seconds from the same user
+    const cooldownKey = `${gameId}_${userId}`;
+    const lastCatch = this.catchCooldowns.get(cooldownKey) ?? 0;
+    if (Date.now() - lastCatch < 2000) return;
+    this.catchCooldowns.set(cooldownKey, Date.now());
+
     const soloPlayerId = this.soloCalledBy.get(gameId);
     const targetId = getTargetIdBySlot(playerIds, userId, slot);
 
@@ -515,11 +528,12 @@ export class GameController {
 
     if (!soloPlayerId || soloPlayerId !== targetId) {
       forceDrawCards(gs, userId, 2);
-      logger?.log(userId, "CATCH_SOLO", `Bad catch — drew 2`);
+      logger?.log(userId, "CATCH_SOLO", "Bad catch — drew 2");
     } else {
       forceDrawCards(gs, soloPlayerId, 2);
       this.soloCalledBy.set(gameId, null);
-      logger?.log(userId, "CATCH_SOLO", `Caught player ${soloPlayerId} — they drew 2`);
+      this.catchCooldowns.delete(cooldownKey); // reset after successful catch
+      logger?.log(userId, "CATCH_SOLO", "Caught player " + soloPlayerId + " — they drew 2");
     }
 
     this.broadcastState(gameId, playerIds, gs, app);

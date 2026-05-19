@@ -130,14 +130,25 @@ export default function Room() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Emit join_room as soon as user is available — separate from listener registration
+  // Emit join_room on connect AND on every reconnect (socket loses room on disconnect)
   useEffect(() => {
     if (!user) return;
-    getSocket().emit("join_room", {
-      gameId: Number(id),
-      userId: user.id,
-      nickname: user.nickname,
-    });
+    const socket = getSocket();
+
+    const doJoin = () => {
+      socket.emit("join_room", {
+        gameId: Number(id),
+        userId: user.id,
+        nickname: user.nickname,
+      });
+    };
+
+    doJoin(); // join immediately
+    socket.on("connect", doJoin); // re-join after any reconnect
+
+    return () => {
+      socket.off("connect", doJoin);
+    };
   }, [user, id]);
 
   const handleLeave = async () => {

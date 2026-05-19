@@ -85,7 +85,7 @@ export default function Game() {
 
   const { soloCalled, showSoloSplash, soloEffects, handleSolo, triggerSolo } =
     useSolo(hand.length);
-  const { catchTarget, showCatchEffect, handleCatch, triggerForSlot } = useCatch(
+  const { catchTarget, showCatchEffect, handleCatch, triggerForSlot, catchLocked } = useCatch(
     oppCounts,
     (slot) => {
       setOppCounts((prev) => ({ ...prev, [slot]: prev[slot] + 2 }));
@@ -114,12 +114,20 @@ export default function Game() {
     triggerSoloRef.current = triggerSolo;
   }, [triggerSolo]);
 
-  // Request fresh game state once on mount (handles arriving before the component mounted)
+  // Request game state on mount AND on every reconnect (socket loses room on disconnect)
   useEffect(() => {
-    const u = JSON.parse(localStorage.getItem("user") ?? "{}");
-    if (sessionId && u.id) {
-      getSocket().emit("request_game_state", { gameId: sessionId, userId: u.id });
-    }
+    const socket = getSocket();
+    const requestState = () => {
+      const u = JSON.parse(localStorage.getItem("user") ?? "{}");
+      if (sessionId && u.id) {
+        socket.emit("request_game_state", { gameId: sessionId, userId: u.id });
+      }
+    };
+    requestState();
+    socket.on("connect", requestState);
+    return () => {
+      socket.off("connect", requestState);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Preload all card SVGs so they appear instantly during gameplay
@@ -389,10 +397,17 @@ export default function Game() {
 
           <PlayerHand hand={hand} onCardClick={handleCardClick} />
 
+          {user?.nickname && (
+            <div className={`player-name-label${currentTurn === 'player' ? ' player-name-label--active' : ''}`}>
+              {user.nickname}
+            </div>
+          )}
+
           <GameActions
-            catchTarget={catchTarget}
+            catchTarget={soloCalled ? null : catchTarget}
             showSolo={hand.length === 1}
             soloCalled={soloCalled}
+            catchLocked={catchLocked}
             onSolo={() => handleSolo(sessionId!, user?.id!)}
             onCatch={handleCatch}
           />

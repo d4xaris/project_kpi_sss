@@ -911,6 +911,22 @@ span {
   user-select: none;
 }
 
+/* active-turn glow */
+.opponent-name--active {
+  animation: nameGlow 1s ease-in-out infinite;
+}
+
+@keyframes nameGlow {
+  0%, 100% {
+    box-shadow: 0 0 6px 1px rgba(255, 220, 50, 0.5);
+    color: #fff;
+  }
+  50% {
+    box-shadow: 0 0 18px 4px rgba(255, 220, 50, 0.95);
+    color: #ffe566;
+  }
+}
+
 /* centered under the top hand */
 .opponent-name--top {
   top: 175px;
@@ -933,6 +949,28 @@ span {
   right: 155px;
   transform: translateY(-50%);
   text-align: right;
+}
+
+/* ── Local player name label (bottom-centre) ── */
+.player-name-label {
+  position: fixed;
+  bottom: 175px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "Hammersmith One", sans-serif;
+  font-size: 1rem;
+  color: #fff;
+  background: #9f00f5;
+  padding: 5px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  z-index: 10;
+}
+
+.player-name-label--active {
+  animation: nameGlow 1s ease-in-out infinite;
 }
 
 /* ── Active wild color label ── */
@@ -1237,7 +1275,8 @@ span {
   transition: background 0.15s ease;
 }
 
-.catch-btn:hover { background: #ff6b00; }
+.catch-btn:hover  { background: #ff6b00; }
+.catch-btn--locked { opacity: 0.45; cursor: not-allowed; }
 
 @keyframes catchAppear {
   from { opacity: 0; transform: scale(0.6); }
