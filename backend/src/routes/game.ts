@@ -1,4 +1,7 @@
 import type { FastifyInstance } from "fastify";
+import { GameService } from "../services/GameService.js";
+
+// Validation schemas
 
 const gameCreateSchema = {
   body: {
@@ -6,213 +9,25 @@ const gameCreateSchema = {
     required: ["sessionName", "maxPlayers"],
     properties: {
       sessionName: { type: "string", minLength: 3, maxLength: 18 },
-      maxPlayers: { type: "integer", minimum: 2, maximum: 4 },
+      maxPlayers:  { type: "integer", minimum: 2, maximum: 4 },
     },
   },
 };
 
+// Routes
+
 export default async function gameRoutes(app: FastifyInstance) {
+  const gameService = new GameService(app.prisma);
+
+  // All /game routes require authentication
   app.addHook("preValidation", (app as any).authenticate);
 
-  // for creating the game
+  // POST /game/create
   app.post("/create", { schema: gameCreateSchema }, async (request, reply) => {
-    const user = request.user as {
-      id: number;
-      nickname: string;
-    };
-
+    const user = request.user as { id: number; nickname: string };
     const { sessionName, maxPlayers } = request.body as any;
 
-    const activeSession = await app.prisma.gameSession.findFirst({
-      where: {
-        players: { some: { id: user.id } },
-        status: { in: ['LOBBY', 'PLAYING'] },
-      },
-    });
-    if (activeSession) {
-      return reply.status(400).send({
-        success: false,
-        message: 'You are already in another session',
-        activeSessionId: activeSession.id,
-      });
-    }
-
-    const game = await app.prisma.gameSession.create({
-      data: {
-        sessionName: sessionName,
-        maxPlayers: maxPlayers,
-        hostId: user.id,
-        players: {
-          connect: { id: user.id },
-        },
-      },
-    });
-
-    const sessionId = String(game.id);
-
-    reply.status(201).send({
-      success: true,
-      message: "Game created",
-      game: game,
-    });
-  });
-
-  // for seeing status of game
-  app.get("/:id/status", async (request, reply) => {
-    const { id } = request.params as { id: string };
-
-    const game = await app.prisma.gameSession.findUniqueOrThrow({
-      where: { id: Number(id) },
-      include: {
-        players: true,
-      },
-    });
-
-    return reply.send({
-      success: true,
-      game: game,
-    });
-  });
-
-  // for start of the game
-  app.post("/:id/start", async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const gameId = Number(id);
-
-    const game = await app.prisma.gameSession.findUniqueOrThrow({
-      where: { id: gameId },
-      include: {
-        players: true,
-        _count: {
-          select: {
-            players: true,
-          },
-        },
-      },
-    });
-
-    if (!game) {
-      return reply.status(404).send({
-        success: false,
-        message: "Game not found",
-      });
-    }
-
-    const user = request.user as { id: number };
-    if (game.hostId !== user.id) {
-      return reply.status(403).send({
-        success: false,
-        error: "Forbidden",
-        message: "Only the host can start the game",
-      });
-    }
-
-    if (game._count.players < 2) {
-      return reply.status(400).send({
-        success: false,
-        message: "Not enough players",
-      });
-    }
-
-    const players = game.players.map((p) => p.id);
-
-    await app.prisma.gameSession.update({
-      where: { id: gameId },
-      data: { status: "PLAYING" },
-    });
-
-    app.io.emit("lobby_room_removed", { id: id });
-
-    return reply.send({
-      success: true,
-      messege: "Game started",
-      players: players,
-      gameId: gameId,
-    });
-  });
-
-  app.get("/sessions", async (request, reply) => {
-    const sessions = await app.prisma.gameSession.findMany({
-      where: {
-        status: "LOBBY",
-      },
-      include: {
-        _count: {
-          select: { players: true },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    const rooms = sessions.map((session) => ({
-      id: session.id,
-      sessionName: session.sessionName,
-      playerCount: session._count.players,
-      maxPlayers: session.maxPlayers,
-      hostId: session.hostId,
-    }));
-
-    return {
-      success: true,
-      rooms: rooms,
-    };
-  });
-
-  app.post("/:id/join", async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const user = request.user as {
-      id: number;
-      nickname: string;
-    };
-    const userId = String(user.id);
-
-    const session = await app.prisma.gameSession.findUnique({
-      where: { id: Number(id) },
-      include: {
-        _count: {
-          select: {
-            players: true,
-          },
-        },
-      },
-    });
-
-    if (!session) {
-      return reply.status(404).send({
-        success: false,
-        message: "Didn't found session",
-      });
-    }
-
-    if (session.status !== "LOBBY") {
-      return reply.status(400).send({
-        success: false,
-        message: "Game already started or ended",
-      });
-    }
-
-    if (session._count.players >= session.maxPlayers) {
-      return reply.status(400).send({
-        success: false,
-        message: "Session is full",
-      });
-    }
-
-    const sessionId = String(session.id);
-
-    const activeSession = await app.prisma.gameSession.findFirst({
-      where: {
-        players: {
-          some: { id: user.id },
-        },
-        status: {
-          in: ["LOBBY", "PLAYING"],
-        },
-      },
-    });
-
+    const activeSession = await gameService.findActiveSession(user.id);
     if (activeSession) {
       return reply.status(400).send({
         success: false,
@@ -221,149 +36,134 @@ export default async function gameRoutes(app: FastifyInstance) {
       });
     }
 
-    await app.prisma.gameSession.update({
-      where: { id: session.id },
-      data: {
-        players: {
-          connect: { id: user.id },
-        },
-      },
-    });
+    const game = await gameService.createSession(sessionName, maxPlayers, user.id);
 
-    return {
+    return reply.status(201).send({
+      success: true,
+      message: "Game created",
+      game,
+    });
+  });
+
+  // GET /game/sessions
+  app.get("/sessions", async (_request, reply) => {
+    const rooms = await gameService.getLobbySessions();
+    return reply.send({ success: true, rooms });
+  });
+
+  // GET /game/:id/status
+  app.get("/:id/status", async (request, reply) => {
+    const { id } = request.params as { id: string };
+
+    const game = await gameService.getSession(Number(id));
+    if (!game) {
+      return reply.status(404).send({ success: false, message: "Game not found" });
+    }
+
+    return reply.send({ success: true, game });
+  });
+
+  // POST /game/:id/join
+  app.post("/:id/join", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const user = request.user as { id: number; nickname: string };
+
+    const session = await gameService.getSession(Number(id));
+    if (!session) {
+      return reply.status(404).send({ success: false, message: "Session not found" });
+    }
+    if (session.status !== "LOBBY") {
+      return reply.status(400).send({ success: false, message: "Game already started or ended" });
+    }
+    if (session._count.players >= session.maxPlayers) {
+      return reply.status(400).send({ success: false, message: "Session is full" });
+    }
+
+    const activeSession = await gameService.findActiveSession(user.id);
+    if (activeSession) {
+      return reply.status(400).send({
+        success: false,
+        message: "You are already in another session",
+        activeSessionId: activeSession.id,
+      });
+    }
+
+    await gameService.joinSession(session.id, user.id);
+
+    return reply.send({
       success: true,
       message: "You successfully joined the room",
       sessionId: session.id,
-    };
+    });
   });
 
+  // POST /game/:id/leave
   app.post("/:id/leave", async (request, reply) => {
     const { id } = request.params as { id: string };
-    const user = request.user as {
-      id: number;
-      nickname: string;
-    };
-    const sessionId = parseInt(id);
-    const userId = String(user.id);
+    const user = request.user as { id: number; nickname: string };
+    const sessionId = Number(id);
 
-    const session = await app.prisma.gameSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        _count: {
-          select: {
-            players: true,
-          },
-        },
-      },
-    });
-
+    const session = await gameService.getSession(sessionId);
     if (!session) {
-      return reply.status(404).send({
-        success: false,
-        message: "Didn't found session",
-      });
+      return reply.status(404).send({ success: false, message: "Session not found" });
     }
 
     if (session.hostId === user.id) {
-      await app.prisma.gameSession.delete({
-        where: { id: sessionId },
-      });
+      await gameService.deleteSession(sessionId);
       app.io.to(`${sessionId}`).emit("game_deleted");
-
-      app.io.emit("lobby_room_removed", {
-        id: id,
-      });
-
-      return {
-        success: true,
-        message: "Session is deleted",
-      };
-    } else {
-      await app.prisma.gameSession.update({
-        where: { id: sessionId },
-        data: {
-          players: {
-            disconnect: { id: user.id },
-          },
-        },
-      });
-
-      return {
-        success: true,
-        message: "You successfully left session",
-      };
+      app.io.emit("lobby_room_removed", { id });
+      return reply.send({ success: true, message: "Session deleted" });
     }
+
+    await gameService.leaveSession(sessionId, user.id);
+    return reply.send({ success: true, message: "You successfully left the session" });
   });
 
+  // POST /game/:id/start
+  app.post("/:id/start", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const user = request.user as { id: number };
+    const sessionId = Number(id);
+
+    const session = await gameService.getSession(sessionId);
+    if (!session) {
+      return reply.status(404).send({ success: false, message: "Game not found" });
+    }
+    if (session.hostId !== user.id) {
+      return reply.status(403).send({ success: false, message: "Only the host can start the game" });
+    }
+    if (session._count.players < 2) {
+      return reply.status(400).send({ success: false, message: "Not enough players" });
+    }
+
+    await gameService.startSession(sessionId);
+    app.io.emit("lobby_room_removed", { id });
+
+    return reply.send({
+      success: true,
+      message: "Game started",
+      players: session.players.map((p: any) => p.id),
+      gameId: sessionId,
+    });
+  });
+
+  // POST /game/:id/finish
   app.post("/:id/finish", async (request, reply) => {
     const { id } = request.params as { id: string };
     const { winnerId } = request.body as { winnerId: number };
-    const sessionId = parseInt(id);
+    const sessionId = Number(id);
 
-    const session = await app.prisma.gameSession.findUnique({
-      where: { id: sessionId },
-      include: { players: true },
-    });
-
+    const session = await gameService.getSession(sessionId);
     if (!session) {
-      return reply.status(404).send({
-        success: false,
-        message: "Game not found",
-      });
+      return reply.status(404).send({ success: false, message: "Game not found" });
     }
-
     if (session.status !== "PLAYING") {
-      return reply.status(400).send({
-        success: false,
-        message: "Game not finnished",
-      });
+      return reply.status(400).send({ success: false, message: "Game is not in progress" });
     }
 
-    const playersIds = session.players.map((p) => p.id);
+    const playerIds = session.players.map((p: any) => p.id);
+    await gameService.finishSession(sessionId, winnerId, playerIds);
 
-    await app.prisma.$transaction([
-      app.prisma.user.updateMany({
-        where: {
-          id: {
-            in: playersIds,
-          },
-        },
-        data: {
-          gamesPlayed: {
-            increment: 1,
-          },
-        },
-      }),
-
-      app.prisma.user.update({
-        where: {
-          id: winnerId,
-        },
-        data: {
-          totalWins: {
-            increment: 1,
-          },
-        },
-      }),
-
-      app.prisma.gameSession.update({
-        where: {
-          id: sessionId,
-        },
-        data: {
-          status: "ENDED",
-        },
-      }),
-    ]);
-
-    app.io.to(`${sessionId}`).emit("game_finished", {
-      winnerId: winnerId,
-      winnerNickname: "",
-    });
-
-    return {
-      success: true,
-      message: "Game finished, everything updated",
-    };
+    return reply.send({ success: true, message: "Game finished, stats updated" });
   });
 }

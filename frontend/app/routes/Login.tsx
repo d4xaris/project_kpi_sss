@@ -8,18 +8,43 @@ export default function Login() {
   const [login, setLogin] = useState("");
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  const { login: authLogin, register, isLoading, error } = useAuth();
+  const { login: authLogin, register, isLoading, error, clearError } = useAuth();
   const navigate = useNavigate();
 
+  const switchTab = (t: "login" | "register") => {
+    setTab(t);
+    setLocalError(null);
+    clearError();
+    setPassword("");
+  };
+
+  const displayError = localError || error;
+
   const handleLogin = async () => {
-    await authLogin(login, password);
-    navigate("/");
+    setLocalError(null);
+    if (!login.trim()) { setLocalError("Please enter your login"); return; }
+    if (!password) { setLocalError("Please enter your password"); return; }
+
+    const ok = await authLogin(login, password);
+    if (ok) navigate("/");
   };
 
   const handleRegister = async () => {
-    await register(login, nickname, password);
-    navigate("/");
+    setLocalError(null);
+    if (!nickname.trim()) { setLocalError("Please enter a nickname"); return; }
+    if (nickname.trim().length < 3) { setLocalError("Nickname must be at least 3 characters"); return; }
+    if (!login.trim()) { setLocalError("Please enter a login"); return; }
+    if (login.trim().length < 3) { setLocalError("Login must be at least 3 characters"); return; }
+    if (password.length < 6) { setLocalError("Password must be at least 6 characters"); return; }
+
+    const ok = await register(login, nickname, password);
+    if (ok) navigate("/");
+  };
+
+  const onKey = (e: React.KeyboardEvent, handler: () => void) => {
+    if (e.key === "Enter" && !isLoading) handler();
   };
 
   return (
@@ -34,36 +59,30 @@ export default function Login() {
                 type="text"
                 placeholder="Login..."
                 value={login}
-                maxLength={20}
+                maxLength={18}
                 onChange={(e) => setLogin(e.target.value)}
+                onKeyDown={(e) => onKey(e, handleLogin)}
                 className="login-input"
               />
               <input
                 type="password"
                 placeholder="Password..."
                 value={password}
-                maxLength={20}
+                maxLength={18}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => onKey(e, handleLogin)}
                 className="login-input"
               />
             </div>
-            {error && <p className="login-error">{error}</p>}
+            {displayError && <p className="login-error">{displayError}</p>}
             <Button
               text={isLoading ? "..." : "Sign in"}
               variant="solid"
               onClick={handleLogin}
             />
             <div className="login-bottom">
-              <Button 
-                text="Create an account" 
-                variant="underline" 
-                onClick={() => setTab("register")} 
-              />
-              <Button 
-                text="Go back" 
-                variant="underline" 
-                onClick={() => navigate("/")} 
-              />
+              <Button text="Create an account" variant="underline" onClick={() => switchTab("register")} />
+              <Button text="Go back" variant="underline" onClick={() => navigate("/")} />
             </div>
           </>
         ) : (
@@ -75,35 +94,38 @@ export default function Login() {
                 type="text"
                 placeholder="Nickname..."
                 value={nickname}
-                maxLength={20}
+                maxLength={18}
                 onChange={(e) => setNickname(e.target.value)}
+                onKeyDown={(e) => onKey(e, handleRegister)}
                 className="login-input"
               />
               <input
                 type="text"
-                placeholder="Login..."
+                              placeholder="Login..."
                 value={login}
-                maxLength={20}
+                maxLength={18}
                 onChange={(e) => setLogin(e.target.value)}
+                onKeyDown={(e) => onKey(e, handleRegister)}
                 className="login-input"
               />
               <input
                 type="password"
-                placeholder="Password..."
+                placeholder="Password... (min. 6 characters)"
                 value={password}
-                maxLength={20}
+                maxLength={18}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => onKey(e, handleRegister)}
                 className="login-input"
               />
             </div>
-            {error && <p className="login-error">{error}</p>}
+            {displayError && <p className="login-error">{displayError}</p>}
             <Button
               text={isLoading ? "..." : "Register"}
               variant="solid"
               onClick={handleRegister}
             />
             <div className="login-bottom">
-              <Button text="Already have an account" variant="underline" onClick={() => setTab("login")} />
+              <Button text="Already have an account" variant="underline" onClick={() => switchTab("login")} />
               <Button text="Go back" variant="underline" onClick={() => navigate("/")} />
             </div>
           </>

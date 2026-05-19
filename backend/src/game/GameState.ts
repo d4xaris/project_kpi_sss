@@ -1,4 +1,4 @@
-import {type ActionResult, type Card} from "./shared.js";
+import {type ActionResult, type Card, type CardColor} from "./shared.js";
 import {canPlayCards} from "./rules.js";
 
 
@@ -71,28 +71,32 @@ export class GameState {
         this.advanceTurn();
     }
 
-     public playCard(playerIds: number,card: Card):ActionResult {
+     public playCard(playerIds: number, card: Card, activeColor?: string | null): ActionResult {
          const activePlayerId = this.playerIds[this.currentPlayerIndex];
          if (this.drawBuffer > 0) {
              if (card.value !== 'drawtwo' && card.value !== 'wild_draw4') {
                  return {success: false, reason: 'CANNOT_PLAY_DRAW_CARD'};
              }
-             if (this.topCard.value === 'wild_draw4'&& card.value === 'drawtwo'){
-                 return {success: false , reason:'CANNOT_OVERRIDE_DRAW4_WITH_DRAW2'}
+             if (this.topCard.value === 'wild_draw4' && card.value === 'drawtwo'){
+                 return {success: false, reason: 'CANNOT_OVERRIDE_DRAW4_WITH_DRAW2'};
              }
          }
          if (playerIds !== activePlayerId) {
              return {success: false, reason: 'NOT_YOUR_TURN'};
-         }//first check
-        const hand = this.playerHands.get(playerIds);
+         }
+         const hand = this.playerHands.get(playerIds);
          if (!hand) {
-                return { success: false, reason: 'PLAYER_NOT_FOUND' };
-         }//second check
+             return { success: false, reason: 'PLAYER_NOT_FOUND' };
+         }
          const cardIndex = hand.findIndex(c => c.color === card.color && c.value === card.value);
          if (cardIndex === -1) {
              return { success: false, reason: 'CARD_NOT_IN_HAND' };
          }
-         if (!canPlayCards(this.topCard, card)) {
+         // When top card is wild, use the active chosen color for validation
+         const effectiveTop = (this.topCard.color === 'wild' && activeColor)
+             ? { ...this.topCard, color: activeColor as CardColor }
+             : this.topCard;
+         if (!canPlayCards(effectiveTop, card)) {
              return {success: false, reason: 'INVALID_CARD'};
          }
          hand.splice(cardIndex, 1);

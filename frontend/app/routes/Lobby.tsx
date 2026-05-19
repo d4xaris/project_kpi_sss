@@ -31,9 +31,9 @@ export default function Lobby() {
         <hr />
 
         {loading ? (
-          <p style={{ textAlign: "center", opacity: 0.6 }}>Loading rooms...</p>
+          <p style={{ textAlign: "center", opacity: 0.6, marginTop: "40px" }}>Loading rooms...</p>
         ) : rooms.length === 0 ? (
-          <p style={{ textAlign: "center", opacity: 0.6 }}>No rooms available</p>
+          <p style={{ textAlign: "center", opacity: 0.6, marginTop: "40px" }}>No rooms available</p>
         ) : rooms.map((room, i) => {
           const full = room.playerCount >= room.maxPlayers;
           return (
