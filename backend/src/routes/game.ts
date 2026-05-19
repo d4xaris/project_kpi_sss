@@ -29,11 +29,16 @@ export default async function gameRoutes(app: FastifyInstance) {
 
     const activeSession = await gameService.findActiveSession(user.id);
     if (activeSession) {
-      return reply.status(400).send({
-        success: false,
-        message: "You are already in another session",
-        activeSessionId: activeSession.id,
-      });
+      if (activeSession.status === "PLAYING") {
+        // Stale session from a crash or server restart — clean it up so the user can continue
+        await gameService.endSession(activeSession.id);
+      } else {
+        return reply.status(400).send({
+          success: false,
+          message: "You are already in another session",
+          activeSessionId: activeSession.id,
+        });
+      }
     }
 
     const game = await gameService.createSession(sessionName, maxPlayers, user.id);
@@ -81,11 +86,16 @@ export default async function gameRoutes(app: FastifyInstance) {
 
     const activeSession = await gameService.findActiveSession(user.id);
     if (activeSession) {
-      return reply.status(400).send({
-        success: false,
-        message: "You are already in another session",
-        activeSessionId: activeSession.id,
-      });
+      if (activeSession.status === "PLAYING") {
+        // Stale session from a crash or server restart — clean it up so the user can continue
+        await gameService.endSession(activeSession.id);
+      } else {
+        return reply.status(400).send({
+          success: false,
+          message: "You are already in another session",
+          activeSessionId: activeSession.id,
+        });
+      }
     }
 
     await gameService.joinSession(session.id, user.id);

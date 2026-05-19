@@ -35,31 +35,10 @@ export default function Game() {
   const playerCount = (location.state as LocationState)?.playerCount ?? 4;
   const sessionId = (location.state as LocationState)?.sessionId ?? null;
 
-  // If the page was refreshed, location.state is lost — show a disconnect screen
+  // If the page was refreshed, location.state is lost — redirect home immediately
   if (!sessionId) {
-    return (
-      <div style={{
-        display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "center", height: "100vh", gap: "16px",
-        background: "var(--bg, #1a1a2e)", color: "white", textAlign: "center",
-        fontFamily: "inherit",
-      }}>
-        <h2 style={{ fontSize: "1.8rem", margin: 0 }}>Session lost</h2>
-        <p style={{ opacity: 0.7, margin: 0 }}>
-          You refreshed during a game.<br />Refreshing disconnects you from the session.
-        </p>
-        <button
-          onClick={() => navigate("/")}
-          style={{
-            marginTop: "8px", padding: "12px 28px", borderRadius: "999px",
-            background: "white", color: "#1a1a2e", border: "none",
-            fontWeight: 700, fontSize: "1rem", cursor: "pointer",
-          }}
-        >
-          Go home
-        </button>
-      </div>
-    );
+    navigate("/", { replace: true });
+    return null;
   }
 
   // State
@@ -92,7 +71,12 @@ export default function Game() {
 
   // When a draw penalty is active, only +2/+4 cards are playable (for stacking)
   const hasPlayableCard = drawBuffer > 0
-    ? hand.some((c) => c.value === "drawtwo" || c.value === "wild_draw4")
+    ? hand.some((c) => {
+        if (c.value === "wild_draw4") return true;
+        // +2 cannot stack on +4 — only counts as playable when top card is also +2
+        if (c.value === "drawtwo" && topCard.value !== "wild_draw4") return true;
+        return false;
+      })
     : hand.some((c) => {
         if (c.color === "wild") return true;
         if (activeWildColor) return c.color === activeWildColor;

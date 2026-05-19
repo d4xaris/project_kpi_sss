@@ -89,10 +89,21 @@ export default fp(async (app) => {
             });
           }
 
-          app.io.emit("lobby_room_updated", {
-            id: String(gameId),
-            playerCount: session._count.players,
-          });
+          const remaining = session._count.players;
+
+          if (remaining === 0) {
+            // Last player left — close the session so nobody gets stuck
+            await app.prisma.gameSession.update({
+              where: { id: Number(gameId) },
+              data: { status: "ENDED" },
+            });
+            app.io.emit("lobby_room_removed", { id: String(gameId) });
+          } else {
+            app.io.emit("lobby_room_updated", {
+              id: String(gameId),
+              playerCount: remaining,
+            });
+          }
 
           app.log.info(
             `User ${nickname} (ID: ${userId}) automatically removed from room ${gameId}`,

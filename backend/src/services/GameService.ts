@@ -70,6 +70,13 @@ export class GameService {
     });
   }
 
+  async endSession(sessionId: number) {
+    await this.prisma.gameSession.update({
+      where: { id: sessionId },
+      data: { status: "ENDED" },
+    });
+  }
+
   async finishSession(sessionId: number, winnerId: number, playerIds: number[]) {
     await this.prisma.$transaction([
       this.prisma.user.updateMany({
