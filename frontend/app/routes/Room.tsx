@@ -79,20 +79,9 @@ export default function Room() {
 
   const canStart = players.length >= 2;
 
-  useEffect(() => {
-    if (user) setPlayers([{ id: user.id, nickname: user.nickname }]);
-  }, [user]);
-
+  // Register socket listeners once on mount — never re-register, avoids missing events
   useEffect(() => {
     const socket = getSocket();
-
-    if (user) {
-      socket.emit("join_room", {
-        gameId: Number(id),
-        userId: user.id,
-        nickname: user.nickname,
-      });
-    }
 
     socket.on("current_players", (data: Player[]) => {
       setPlayers(data);
@@ -138,7 +127,17 @@ export default function Room() {
       socket.off("game_deleted");
       socket.off("game_start_settings");
     };
-  }, [navigate, user, id]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Emit join_room as soon as user is available — separate from listener registration
+  useEffect(() => {
+    if (!user) return;
+    getSocket().emit("join_room", {
+      gameId: Number(id),
+      userId: user.id,
+      nickname: user.nickname,
+    });
+  }, [user, id]);
 
   const handleLeave = async () => {
     await leaveRoom(Number(id));

@@ -8,6 +8,7 @@ export interface GameStateSnapshot {
   currentTurn: "player" | Slot;
   direction: 1 | -1;
   drawBuffer: number;
+  activeColor: string | null;
   opponents: {
     top?: { nickname: string; cardCount: number };
     left?: { nickname: string; cardCount: number };

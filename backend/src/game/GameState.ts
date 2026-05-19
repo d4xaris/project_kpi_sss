@@ -116,7 +116,9 @@ export class GameState {
                  break
              case 'reverse':
                  this.direction *= -1;
-                 this.advanceTurn()
+                 // In a 2-player game, reverse acts like a skip: same player goes again
+                 if (this.playerIds.length === 2) this.advanceTurn();
+                 this.advanceTurn();
                  break
              case 'drawtwo':
                  this.drawBuffer += 2;

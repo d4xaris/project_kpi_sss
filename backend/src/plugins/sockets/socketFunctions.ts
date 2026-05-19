@@ -46,6 +46,7 @@ export function buildSnapshot(
   playerIds: number[],
   forPlayerId: number,
   nicknames: Map<number, string>,
+  activeColor: string | null = null,
 ): GameStateSnapshot {
   const hands = (gs as any).playerHands as Map<number, Card[]>;
   const counts: Record<number, number> = {};
@@ -71,6 +72,7 @@ export function buildSnapshot(
     currentTurn: getSlot(playerIds, forPlayerId, currentId),
     direction: gs.direction as 1 | -1,
     drawBuffer: (gs as any).drawBuffer as number,
+    activeColor,
     opponents,
   };
 }

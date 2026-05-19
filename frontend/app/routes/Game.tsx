@@ -186,6 +186,9 @@ export default function Game() {
       setTopCard(snapshot.topCard);
       setCurrentTurn(snapshot.currentTurn);
       setDrawBuffer(snapshot.drawBuffer ?? 0);
+      if (snapshot.activeColor !== undefined) {
+        setActiveWildColor((snapshot.activeColor as any) ?? null);
+      }
       setOppCounts({
         top: snapshot.opponents.top?.cardCount ?? 0,
         left: snapshot.opponents.left?.cardCount ?? 0,

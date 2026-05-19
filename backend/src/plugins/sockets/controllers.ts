@@ -33,8 +33,9 @@ export class GameController {
     gs: GameState,
     app: any,
   ) {
+    const activeColor = this.activeColors.get(gameId) ?? null;
     for (const pid of playerIds) {
-      const snap = buildSnapshot(gs, playerIds, pid, this.playerNicknames);
+      const snap = buildSnapshot(gs, playerIds, pid, this.playerNicknames, activeColor);
       app.io.to(`user_${pid}`).emit("game_state", snap);
     }
   }
@@ -415,7 +416,8 @@ export class GameController {
     const playerIds = this.gamePlayerIds.get(gameId);
     if (!gs || !playerIds) return;
 
-    const snap = buildSnapshot(gs, playerIds, numUserId, this.playerNicknames);
+    const activeColor = this.activeColors.get(gameId) ?? null;
+    const snap = buildSnapshot(gs, playerIds, numUserId, this.playerNicknames, activeColor);
     socket.emit("game_state", snap);
 
     const currentPlayerId = playerIds[gs.currentPlayerIndex]!;
