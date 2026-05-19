@@ -1,13 +1,16 @@
-const play = (name: string, volume = 0.7) => {
+const getVolume = () =>
+  parseFloat(localStorage.getItem('soundVolume') ?? '0.1');
+
+const play = (name: string, volumeMultiplier = 1) => {
   const audio = new Audio(`/sounds/${name}.mp3`);
-  audio.volume = volume;
+  audio.volume = Math.min(1, getVolume() * volumeMultiplier);
   audio.play().catch(() => {});
 };
 
 export function useSounds() {
   return {
-    click:     () => play('click',     0.5),
-    gameStart: () => play('gamestart', 0.8),
-    start:     () => play('start',     0.8),
+    click:     () => play('click'),
+    gameStart: () => play('gamestart'),
+    start:     () => play('start'),
   };
 }

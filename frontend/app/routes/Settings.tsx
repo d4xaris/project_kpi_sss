@@ -6,10 +6,10 @@ import Slider from "~/components/Slider";
 export default function Settings() {
   const navigate = useNavigate();
   const [musicVolume, setMusicVolume] = useState(
-    () => Math.round(parseFloat(localStorage.getItem('musicVolume') ?? '0.5') * 100)
+    () => Math.round(parseFloat(localStorage.getItem('musicVolume') ?? '0.3') * 100)
   );
   const [soundVolume, setSoundVolume] = useState(
-    () => Math.round(parseFloat(localStorage.getItem('soundVolume') ?? '0.7') * 100)
+    () => Math.round(parseFloat(localStorage.getItem('soundVolume') ?? '0.1') * 100)
   );
 
   useEffect(() => {

@@ -1,5 +1,5 @@
 const getVolume = () =>
-  parseFloat(localStorage.getItem('soundVolume') ?? '0.7');
+  parseFloat(localStorage.getItem('soundVolume') ?? '0.1');
 
 const play = (name: string, volumeMultiplier = 1) => {
   const audio = new Audio(`/sounds/${name}.mp3`);

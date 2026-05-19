@@ -111,7 +111,9 @@ export async function apiFetch(url: string, init: RequestInit = {}): Promise<Res
   let res: Response;
   try {
     res = await send();
-    if (res.status === 401 && cfg.strategy === 'jwt') {
+    // Only try to refresh if there is actually a token that could have expired.
+    // Skips refresh on login/register 401s where no token exists yet.
+    if (res.status === 401 && cfg.strategy === 'jwt' && localStorage.getItem('token')) {
       const fresh = await refreshToken();
       if (fresh) res = await send();
     }
