@@ -54,6 +54,7 @@ export function HydrateFallback() {
           height: "100vh",
           background: "#0d0d1a",
         }} />
+        <Scripts /> 
       </body>
     </html>
   );
