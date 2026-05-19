@@ -35,8 +35,36 @@ export default function Game() {
   const playerCount = (location.state as LocationState)?.playerCount ?? 4;
   const sessionId = (location.state as LocationState)?.sessionId ?? null;
 
+  // If the page was refreshed, location.state is lost — show a disconnect screen
+  if (!sessionId) {
+    return (
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", height: "100vh", gap: "16px",
+        background: "var(--bg, #1a1a2e)", color: "white", textAlign: "center",
+        fontFamily: "inherit",
+      }}>
+        <h2 style={{ fontSize: "1.8rem", margin: 0 }}>Session lost</h2>
+        <p style={{ opacity: 0.7, margin: 0 }}>
+          You refreshed during a game.<br />Refreshing disconnects you from the session.
+        </p>
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            marginTop: "8px", padding: "12px 28px", borderRadius: "999px",
+            background: "white", color: "#1a1a2e", border: "none",
+            fontWeight: 700, fontSize: "1rem", cursor: "pointer",
+          }}
+        >
+          Go home
+        </button>
+      </div>
+    );
+  }
+
   // State
   const [phase, setPhase] = useState<Phase>(fromRoom ? "closed" : "closing");
+  const [isPlaying, setIsPlaying] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
   const [showTroll, setShowTroll] = useState(false);
   const [winExiting, setWinExiting] = useState(false);
@@ -59,6 +87,8 @@ export default function Game() {
 
   const turnTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const pendingWildTurn = useRef<Card | null>(null);
+  // Keep a stable ref to triggerSolo so the socket useEffect doesn't re-run every render
+  const triggerSoloRef = useRef<() => void>(() => {});
 
   // When a draw penalty is active, only +2/+4 cards are playable (for stacking)
   const hasPlayableCard = drawBuffer > 0
@@ -95,6 +125,29 @@ export default function Game() {
     if (phase === "closed") sounds.start();
   }, [phase]);
 
+  // Keep triggerSoloRef current without putting triggerSolo in socket deps
+  useEffect(() => {
+    triggerSoloRef.current = triggerSolo;
+  }, [triggerSolo]);
+
+  // Request fresh game state once on mount (handles arriving before the component mounted)
+  useEffect(() => {
+    const u = JSON.parse(localStorage.getItem("user") ?? "{}");
+    if (sessionId && u.id) {
+      getSocket().emit("request_game_state", { gameId: sessionId, userId: u.id });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-draw when a draw penalty is active and the player has no card to stack
+  useEffect(() => {
+    if (currentTurn !== "player" || drawBuffer === 0 || hasPlayableCard || isPlaying) return;
+    const t = setTimeout(() => {
+      setIsPlaying(true);
+      getSocket().emit("draw_card", { gameId: sessionId, userId: user?.id });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [currentTurn, drawBuffer, hasPlayableCard, isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (fromRoom) {
       const t1 = setTimeout(() => setPhase("opening"), 900);
@@ -118,7 +171,18 @@ export default function Game() {
     const socket = getSocket();
 
     socket.on("game_state", (snapshot: any) => {
-      setHand(snapshot.yourHand.map((c: Card) => ({ ...c, uid: mkUid() })));
+      setHand(prev => {
+        const incoming: Card[] = snapshot.yourHand;
+        const pool = [...prev];
+        return incoming.map(card => {
+          const idx = pool.findIndex(p => p.color === card.color && p.value === card.value);
+          if (idx !== -1) {
+            const existing = pool.splice(idx, 1)[0]!;
+            return existing; // preserve UID so no re-deal animation
+          }
+          return { ...card, uid: mkUid() }; // truly new card → deal animation
+        });
+      });
       setTopCard(snapshot.topCard);
       setCurrentTurn(snapshot.currentTurn);
       setDrawBuffer(snapshot.drawBuffer ?? 0);
@@ -136,6 +200,7 @@ export default function Game() {
 
     socket.on("game_turn", (data: { turn: Turn }) => {
       setCurrentTurn(data.turn);
+      setIsPlaying(false);
     });
 
     socket.on("card_played", (data: { slot: Slot; card: Card }) => {
@@ -187,15 +252,18 @@ export default function Game() {
       },
     );
 
-    socket.on("solo_called", () => {
-      triggerSolo();
+    socket.on("say_solo", () => {
+      triggerSoloRef.current();
     });
 
-    // Request fresh state in case we missed the initial broadcast during navigation
-    const u = JSON.parse(localStorage.getItem("user") ?? "{}");
-    if (sessionId && u.id) {
-      socket.emit("request_game_state", { gameId: sessionId, userId: u.id });
-    }
+    // If the server rejects our move, unlock the UI and pull fresh state
+    socket.on("error_message", () => {
+      setIsPlaying(false);
+      const u = JSON.parse(localStorage.getItem("user") ?? "{}");
+      if (sessionId && u.id) {
+        socket.emit("request_game_state", { gameId: sessionId, userId: u.id });
+      }
+    });
 
     return () => {
       socket.off("game_state");
@@ -206,13 +274,14 @@ export default function Game() {
       socket.off("solo_catch_result");
       socket.off("color_chosen");
       socket.off("game_finished");
-      socket.off("solo_called");
+      socket.off("say_solo");
+      socket.off("error_message");
     };
-  }, [sessionId, triggerSolo]);
+  }, [sessionId]);
 
   // Handlers
   const handleCardClick = (card: Card, index: number) => {
-    if (currentTurn !== "player") return;
+    if (currentTurn !== "player" || isPlaying) return;
 
     if (card.value === "troll") {
       setHand((prev) => prev.filter((_, i) => i !== index));
@@ -221,6 +290,19 @@ export default function Game() {
       return;
     }
 
+    // Client-side validation — mirrors server rules so invalid cards are silently ignored
+    if (drawBuffer > 0) {
+      // A draw penalty is active: only stacking draw cards are allowed
+      if (card.value !== "drawtwo" && card.value !== "wild_draw4") return;
+      if (topCard.value === "wild_draw4" && card.value === "drawtwo") return;
+    } else if (card.color !== "wild") {
+      // Regular non-wild card: must match the active color or the top card's value
+      const effectiveColor = activeWildColor ?? topCard.color;
+      if (card.color !== effectiveColor && card.value !== topCard.value) return;
+    }
+    // Wild cards are always playable when there is no draw penalty
+
+    setIsPlaying(true);
     setHand((prev) => prev.filter((_, i) => i !== index));
     setTopCard(card);
     setActiveWildColor(null);
@@ -239,7 +321,8 @@ export default function Game() {
   };
 
   const handleDeckClick = () => {
-    if (currentTurn !== "player" || hasPlayableCard) return;
+    if (currentTurn !== "player" || hasPlayableCard || isPlaying) return;
+    setIsPlaying(true);
     getSocket().emit("draw_card", { gameId: sessionId, userId: user?.id });
   };
 

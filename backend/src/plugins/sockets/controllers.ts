@@ -295,7 +295,7 @@ export class GameController {
       });
     }
 
-    const result = gs.playCard(userId, card);
+    const result = gs.playCard(userId, card, activeColor);
     if (!result.success) {
       return socket.emit("error_message", {
         code: result.reason,
@@ -315,10 +315,10 @@ export class GameController {
       }
     }
 
-    // Wild cards: wait for colour choice before advancing
+    // Wild cards: wait for colour choice before broadcasting state or turn.
+    // Opponents already got card_played above; full state + turn come in handleChooseColor.
     if (card.value === "wild" || card.value === "wild_draw4") {
       app.io.to(`user_${userId}`).emit("choose_color_prompt", {});
-      this.broadcastState(gameId, playerIds, gs, app);
       return;
     }
 
@@ -393,6 +393,33 @@ export class GameController {
     this.broadcastState(gameId, playerIds, gs, app);
     const nextId = playerIds[gs.currentPlayerIndex]!;
     broadcastTurn(playerIds, nextId, app);
+  }
+
+  @OnSocketEvent("request_game_state")
+  async handleRequestGameState(socket: Socket, data: any, app: any) {
+    const { gameId, userId } = data;
+    const numUserId = Number(userId);
+
+    // Re-join socket rooms in case this player missed the original broadcast
+    socket.join(`${gameId}`);
+    socket.join(`user_${numUserId}`);
+    socket.data.userId = numUserId;
+    socket.data.gameId = gameId;
+
+    if (!this.playerNicknames.has(numUserId)) {
+      const user = await app.prisma.user.findUnique({ where: { id: numUserId } });
+      if (user) this.playerNicknames.set(numUserId, (user as any).nickname);
+    }
+
+    const gs = this.gameStates.get(gameId);
+    const playerIds = this.gamePlayerIds.get(gameId);
+    if (!gs || !playerIds) return;
+
+    const snap = buildSnapshot(gs, playerIds, numUserId, this.playerNicknames);
+    socket.emit("game_state", snap);
+
+    const currentPlayerId = playerIds[gs.currentPlayerIndex]!;
+    broadcastTurn(playerIds, currentPlayerId, app);
   }
 
   @OnSocketEvent("say_solo")
