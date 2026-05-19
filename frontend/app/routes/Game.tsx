@@ -25,8 +25,6 @@ interface LocationState {
   sessionId?: number;
 }
 
-// Game
-
 export default function Game() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -35,13 +33,11 @@ export default function Game() {
   const playerCount = (location.state as LocationState)?.playerCount ?? 4;
   const sessionId = (location.state as LocationState)?.sessionId ?? null;
 
-  // If the page was refreshed, location.state is lost — redirect home immediately
   if (!sessionId) {
     navigate("/", { replace: true });
     return null;
   }
 
-  // State
   const [phase, setPhase] = useState<Phase>(fromRoom ? "closed" : "closing");
   const [isPlaying, setIsPlaying] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
@@ -67,10 +63,8 @@ export default function Game() {
 
   const turnTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const pendingWildTurn = useRef<Card | null>(null);
-  // Keep a stable ref to triggerSolo so the socket useEffect doesn't re-run every render
   const triggerSoloRef = useRef<() => void>(() => {});
 
-  // When a draw penalty is active, only +2/+4 cards are playable (for stacking)
   const hasPlayableCard = drawBuffer > 0
     ? hand.some((c) => {
         if (c.value === "wild_draw4") return true;
@@ -95,7 +89,6 @@ export default function Game() {
     },
   );
 
-  // Effects
   useBlocker(() => phase === "done" && winner === null);
 
   useEffect(() => {
@@ -110,12 +103,10 @@ export default function Game() {
     if (phase === "closed") sounds.start();
   }, [phase]);
 
-  // Keep triggerSoloRef current without putting triggerSolo in socket deps
   useEffect(() => {
     triggerSoloRef.current = triggerSolo;
   }, [triggerSolo]);
 
-  // Request game state on mount AND on every reconnect (socket loses room on disconnect)
   useEffect(() => {
     const socket = getSocket();
     const requestState = () => {
@@ -129,9 +120,8 @@ export default function Game() {
     return () => {
       socket.off("connect", requestState);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Preload all public assets so they appear instantly during gameplay
   useEffect(() => {
     const colors = ["crimson", "orange", "purple", "yellow"];
     const values = ["0","1","2","3","4","5","6","7","8","9","drawtwo","reverse","skip"];
@@ -156,7 +146,6 @@ export default function Game() {
     v.src = "/shreked.mp4";
   }, []);
 
-  // Auto-draw when a draw penalty is active and the player has no card to stack
   useEffect(() => {
     if (currentTurn !== "player" || drawBuffer === 0 || hasPlayableCard || isPlaying) return;
     const t = setTimeout(() => {
@@ -196,9 +185,9 @@ export default function Game() {
           const idx = pool.findIndex(p => p.color === card.color && p.value === card.value);
           if (idx !== -1) {
             const existing = pool.splice(idx, 1)[0]!;
-            return existing; // preserve UID so no re-deal animation
+            return existing;
           }
-          return { ...card, uid: mkUid() }; // truly new card → deal animation
+          return { ...card, uid: mkUid() };
         });
       });
       setTopCard(snapshot.topCard);
@@ -264,7 +253,6 @@ export default function Game() {
       "game_finished",
       (data: { winnerId: number; winnerNickname: string }) => {
         setWinner(data.winnerNickname);
-        // Stats are saved server-side when game_finished is emitted
       },
     );
 
@@ -274,15 +262,12 @@ export default function Game() {
 
     socket.on("say_solo", (data: { slot?: string | null }) => {
       triggerSoloRef.current();
-      // Caller is now protected — close their catch window if it was open
       if (data?.slot) closeCatchForSlot(data.slot as any);
     });
 
-    // Someone missed the solo window — server auto-drew 2 cards for them
     socket.on("solo_missed", (data: { userId: number }) => {
       const u = JSON.parse(localStorage.getItem("user") ?? "{}");
       if (data.userId === u.id) {
-        // It was us — our hand already updated via game_state; nothing extra needed
       }
     });
 
@@ -291,7 +276,6 @@ export default function Game() {
       setTimeout(() => setShowRemoteCatchEffect(false), 1300);
     });
 
-    // If the server rejects our move, unlock the UI and pull fresh state
     socket.on("error_message", () => {
       setIsPlaying(false);
       const u = JSON.parse(localStorage.getItem("user") ?? "{}");
@@ -317,7 +301,6 @@ export default function Game() {
     };
   }, [sessionId]);
 
-  // Handlers
   const handleCardClick = (card: Card, index: number) => {
     if (currentTurn !== "player" || isPlaying) return;
 
@@ -328,17 +311,13 @@ export default function Game() {
       return;
     }
 
-    // Client-side validation — mirrors server rules so invalid cards are silently ignored
     if (drawBuffer > 0) {
-      // A draw penalty is active: only stacking draw cards are allowed
       if (card.value !== "drawtwo" && card.value !== "wild_draw4") return;
       if (topCard.value === "wild_draw4" && card.value === "drawtwo") return;
     } else if (card.color !== "wild") {
-      // Regular non-wild card: must match the active color or the top card's value
       const effectiveColor = activeWildColor ?? topCard.color;
       if (card.color !== effectiveColor && card.value !== topCard.value) return;
     }
-    // Wild cards are always playable when there is no draw penalty
 
     setIsPlaying(true);
     setHand((prev) => prev.filter((_, i) => i !== index));
@@ -388,7 +367,6 @@ export default function Game() {
     setTimeout(() => navigate("/"), 750);
   };
 
-  // Render
   return (
     <div className="game">
       <img className="game-bg" src="/table.jpg" draggable={false} />

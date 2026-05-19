@@ -28,7 +28,6 @@ export function useCatch(
   const catchTargetRef  = useRef<Slot | null>(null);
   const prevRef         = useRef({ ...oppCounts });
 
-  // Keep a ref in sync so closeCatchForSlot can read it without stale closure
   useEffect(() => { catchTargetRef.current = catchTarget; }, [catchTarget]);
 
   useEffect(() => {
@@ -53,7 +52,6 @@ export function useCatch(
     if (lockTimer.current)   clearTimeout(lockTimer.current);
   }, []);
 
-  // Cancel the catch window entirely (e.g. when local player presses SOLO)
   const clearCatch = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
@@ -61,8 +59,6 @@ export function useCatch(
     catchTargetRef.current = null;
   };
 
-  // Close catch window only if it targets the given slot
-  // (called when that opponent calls SOLO — they are now protected)
   const closeCatchForSlot = (slot: Slot) => {
     if (catchTargetRef.current === slot) {
       clearCatch();

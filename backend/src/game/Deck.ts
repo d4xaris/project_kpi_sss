@@ -3,14 +3,14 @@ import {type CardColor, type CardValue } from './shared.js';
 interface Card{
     color: CardColor;
     value: CardValue;
-}// интерфейс карт
+}
 export class Deck {
     private cards: Card[] = [];
 
     constructor() {
         const colors: CardColor[] = ['crimson', 'yellow', 'orange', 'purple'];
         const values: CardValue[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'skip', 'reverse', 'drawtwo',];
-        const zero: CardValue = '0'; // нулей только 4
+        const zero: CardValue = '0';
         if(Math.random() < 0.05){
             this.cards.push({ color: 'wild', value: 'troll' });
        }
@@ -24,13 +24,13 @@ export class Deck {
             this.cards.push({
                 color: color,
                 value: zero,
-            });// генерация нулей
+            });
             for (let i = 0; i < 2; i++) {
                 for (const value of values) {
                     this.cards.push({
                         color: color,
                         value: value,
-                    }); // генерация всех ост карт
+                    });
                 }
             }
         }
@@ -45,7 +45,7 @@ export class Deck {
             this.cards[i] = this.cards[j] as Card;
             this.cards[j] = temp;
         }
-    } // тасование карт алгоритмом Фишера-Йетса
+    }
     draw(count: number) {
         const actualCount = Math.min(count, this.cards.length);
         if (count <= 0) {

@@ -37,29 +37,6 @@ export default function Root() {
   );
 }
 
-export function HydrateFallback() {
-  return (
-    <html>
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Project SSS</title>
-        <link rel="icon" type="image/png" href="/favicon.png?v2" />
-      </head>
-      <body>
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          background: "#0d0d1a",
-        }} />
-        <Scripts /> 
-      </body>
-    </html>
-  );
-}
-
 function ErrorPage({ code, title, message }: { code: number; title: string; message: string }) {
   const navigate = useNavigate();
   return (

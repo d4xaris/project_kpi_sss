@@ -954,7 +954,7 @@ span {
 /* ── Local player name label (bottom-centre) ── */
 .player-name-label {
   position: fixed;
-  bottom: 155px;
+  bottom: 185px;
   left: 50%;
   transform: translateX(-50%);
   font-family: "Hammersmith One", sans-serif;
@@ -976,7 +976,7 @@ span {
 /* ── Active wild color label ── */
 .wild-color-label {
   position: fixed;
-  top: 55%;
+  top: 60%;
   left: 50%;
   transform: translateX(-50%);
   font-family: "Hammersmith One", sans-serif;
@@ -1491,44 +1491,4 @@ span {
 }
 
 @keyframes winBtnPop {
-  from { opacity: 0; transform: scale(0.75); }
-  to   { opacity: 1; transform: scale(1);    }
-}
-
-/* ======= Troll Screen ======= */
-
-.troll-screen {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background: #000;
-}
-
-.troll-text {
-  position: absolute;
-  top: 36px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1;
-  font-family: "Hammersmith One", sans-serif;
-  font-size: clamp(3rem, 8vw, 7rem);
-  font-weight: 900;
-  text-transform: uppercase;
-  margin: 0;
-  white-space: nowrap;
-  background: linear-gradient(90deg, #ff6b6b, #ffd700, #a8ff78, #5ce1e6, #9b59b6, #ff6b6b);
-  background-size: 300% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: rainbow 1.5s linear infinite;
-  user-select: none;
-}
-
-.troll-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+  from { opacity: 0; transform: scale(0.75)

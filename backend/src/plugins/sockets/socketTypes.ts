@@ -40,7 +40,6 @@ export interface ClientToServer {
 }
 
 export interface ServerToClient {
-  // lobby
   lobby_room_updated: (data: { id: string; playerCount: number }) => void;
   lobby_room_removed: (data: { id: string }) => void;
   room_created: (data: {
@@ -49,19 +48,15 @@ export interface ServerToClient {
     playerCount: number;
     maxPlayers: number;
   }) => void;
-  // room
   joined_player: (data: { id: string; nickname: string }) => void;
   current_players: (players: any[]) => void;
   player_left: (data: { socketId: string; nickname?: string }) => void;
   game_deleted: () => void;
-  // navigation
   game_start_settings: (data: {
     sessionId: number;
     playerCount: number;
   }) => void;
-  // status
   game_state: (snapshot: GameStateSnapshot) => void;
-  // in-game
   game_turn: (data: { turn: "player" | Slot }) => void;
   card_played: (data: { slot: Slot; card: Card }) => void;
   cards_drawn: (data: { cards: Card[] }) => void;

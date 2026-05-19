@@ -92,7 +92,6 @@ export default fp(async (app) => {
           const remaining = session._count.players;
 
           if (remaining === 0) {
-            // Last player left — close the session so nobody gets stuck
             await app.prisma.gameSession.update({
               where: { id: Number(gameId) },
               data: { status: "ENDED" },

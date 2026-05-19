@@ -1,8 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { AuthService } from "../services/AuthService.js";
 
-// Validation schemas
-
 const registrationSchema = {
   body: {
     type: "object",
@@ -25,8 +23,6 @@ const loginSchema = {
     },
   },
 };
-
-// Routes
 
 export default async function authRoutes(app: FastifyInstance) {
   const authService = new AuthService(app.prisma);

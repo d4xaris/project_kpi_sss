@@ -1,8 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { GameService } from "../services/GameService.js";
 
-// Validation schemas
-
 const gameCreateSchema = {
   body: {
     type: "object",
@@ -14,15 +12,11 @@ const gameCreateSchema = {
   },
 };
 
-// Routes
-
 export default async function gameRoutes(app: FastifyInstance) {
   const gameService = new GameService(app.prisma);
 
-  // All /game routes require authentication
   app.addHook("preValidation", (app as any).authenticate);
 
-  // POST /game/create
   app.post("/create", { schema: gameCreateSchema }, async (request, reply) => {
     const user = request.user as { id: number; nickname: string };
     const { sessionName, maxPlayers } = request.body as any;
@@ -30,7 +24,6 @@ export default async function gameRoutes(app: FastifyInstance) {
     const activeSession = await gameService.findActiveSession(user.id);
     if (activeSession) {
       if (activeSession.status === "PLAYING") {
-        // Stale session from a crash or server restart — clean it up so the user can continue
         await gameService.endSession(activeSession.id);
       } else {
         return reply.status(400).send({
@@ -50,13 +43,11 @@ export default async function gameRoutes(app: FastifyInstance) {
     });
   });
 
-  // GET /game/sessions
   app.get("/sessions", async (_request, reply) => {
     const rooms = await gameService.getLobbySessions();
     return reply.send({ success: true, rooms });
   });
 
-  // GET /game/:id/status
   app.get("/:id/status", async (request, reply) => {
     const { id } = request.params as { id: string };
 
@@ -68,7 +59,6 @@ export default async function gameRoutes(app: FastifyInstance) {
     return reply.send({ success: true, game });
   });
 
-  // POST /game/:id/join
   app.post("/:id/join", async (request, reply) => {
     const { id } = request.params as { id: string };
     const user = request.user as { id: number; nickname: string };
@@ -87,7 +77,6 @@ export default async function gameRoutes(app: FastifyInstance) {
     const activeSession = await gameService.findActiveSession(user.id);
     if (activeSession) {
       if (activeSession.status === "PLAYING") {
-        // Stale session from a crash or server restart — clean it up so the user can continue
         await gameService.endSession(activeSession.id);
       } else {
         return reply.status(400).send({
@@ -107,7 +96,6 @@ export default async function gameRoutes(app: FastifyInstance) {
     });
   });
 
-  // POST /game/:id/leave
   app.post("/:id/leave", async (request, reply) => {
     const { id } = request.params as { id: string };
     const user = request.user as { id: number; nickname: string };
@@ -129,7 +117,6 @@ export default async function gameRoutes(app: FastifyInstance) {
     return reply.send({ success: true, message: "You successfully left the session" });
   });
 
-  // POST /game/:id/start
   app.post("/:id/start", async (request, reply) => {
     const { id } = request.params as { id: string };
     const user = request.user as { id: number };
@@ -157,7 +144,6 @@ export default async function gameRoutes(app: FastifyInstance) {
     });
   });
 
-  // POST /game/:id/finish
   app.post("/:id/finish", async (request, reply) => {
     const { id } = request.params as { id: string };
     const { winnerId } = request.body as { winnerId: number };

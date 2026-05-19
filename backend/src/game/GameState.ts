@@ -12,15 +12,11 @@ export class GameState {
     currentPlayerIndex = 0;
     private drawBuffer = 0;
     topCard: Card;
-    //логіка стола і гравців
     constructor(ids: number[], startingCards: Card[]) {
-        //все що пов'язано с картами и колодою карт
         this.deck = startingCards;
         this.discard_deck = [];
-        //перша карта та сума штраф карт
         this.direction = 1;
         this.drawBuffer = 0;
-        //гравець і все що з ним пов'язано
         this.playerIds = ids;
         this.playerHands = new Map();
         this.currentPlayerIndex = 0;
