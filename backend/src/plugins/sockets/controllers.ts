@@ -22,10 +22,9 @@ export class GameController {
   private gameLoggers  = new Map<number, GameLogger>();
   private activeColors = new Map<number, string>();
   private soloCalledBy   = new Map<number, number | null>();
-  // key: `${gameId}_${userId}` — clears when solo is called or hand changes
   private soloTimers     = new Map<string, ReturnType<typeof setTimeout>>();
-  // key: `${gameId}_${userId}` — timestamp of last accepted catch attempt
   private catchCooldowns = new Map<string, number>();
+  private catchClaimed  = new Map<string, number>();
 
   private startSoloTimer(gameId: number, userId: number, gs: GameState, playerIds: number[], app: any) {
     const key = `${gameId}_${userId}`;
@@ -36,9 +35,8 @@ export class GameController {
       const currentPids  = this.gamePlayerIds.get(gameId);
       if (!currentGs || !currentPids) return;
       const hand = (currentGs as any).playerHands.get(userId) as any[] | undefined;
-      if (!hand || hand.length !== 1) return;        // hand changed — skip
-      if (this.soloCalledBy.get(gameId) === userId) return; // solo was called — skip
-      // Penalize: force draw 2 cards
+      if (!hand || hand.length !== 1) return;        
+      if (this.soloCalledBy.get(gameId) === userId) return; 
       forceDrawCards(currentGs, userId, 2);
       app.io.to(`${gameId}`).emit("solo_missed", { userId });
       this.broadcastState(gameId, currentPids, currentGs, app);
@@ -76,7 +74,6 @@ export class GameController {
     this.gamePlayerIds.delete(gameId);
     this.activeColors.delete(gameId);
     this.soloCalledBy.delete(gameId);
-    // Clear any pending solo timers and catch cooldowns for this game
     for (const key of [...this.soloTimers.keys()]) {
       if (key.startsWith(`${gameId}_`)) {
         clearTimeout(this.soloTimers.get(key)!);
@@ -86,6 +83,11 @@ export class GameController {
     for (const key of [...this.catchCooldowns.keys()]) {
       if (key.startsWith(`${gameId}_`)) {
         this.catchCooldowns.delete(key);
+      }
+    }
+    for (const key of [...this.catchClaimed.keys()]) {
+      if (key.startsWith(`${gameId}_`)) {
+        this.catchClaimed.delete(key);
       }
     }
   }
@@ -326,7 +328,6 @@ export class GameController {
       });
     }
 
-    // For wild cards, honour the active colour chosen earlier
     const effectiveTopColor = activeColor ?? gs.topCard.color;
     if (
       card.color !== "wild" &&
@@ -359,8 +360,6 @@ export class GameController {
       }
     }
 
-    // Wild cards: wait for colour choice before broadcasting state or turn.
-    // Opponents already got card_played above; full state + turn come in handleChooseColor.
     if (card.value === "wild" || card.value === "wild_draw4") {
       app.io.to(`user_${userId}`).emit("choose_color_prompt", {});
       return;
@@ -370,6 +369,22 @@ export class GameController {
       const r = gs.getResult();
       const winnerId = r?.winner ?? -1;
       const winnerNickname = this.playerNicknames.get(winnerId) ?? "";
+      try {
+        await app.prisma.$transaction([
+          app.prisma.user.updateMany({
+            where: { id: { in: playerIds } },
+            data:  { gamesPlayed: { increment: 1 } },
+          }),
+          app.prisma.user.update({
+            where: { id: winnerId },
+            data:  { totalWins: { increment: 1 } },
+          }),
+          app.prisma.gameSession.update({
+            where: { id: gameId },
+            data:  { status: "ENDED" },
+          }),
+        ]);
+      } catch (_) { /* game state still cleaned up */ }
       app.io.to(`${gameId}`).emit("game_finished", { winnerId, winnerNickname });
       logger?.system("GAME_FINISHED", `Winner: ${winnerNickname}`);
       logger?.close();
@@ -381,7 +396,6 @@ export class GameController {
     const nextId = playerIds[gs.currentPlayerIndex]!;
     broadcastTurn(playerIds, nextId, app);
 
-    // Start solo penalty timer if the player just reached 1 card
     const remainingHand = (gs as any).playerHands.get(userId) as any[] | undefined;
     if (remainingHand?.length === 1 && !gs.isGameOver()) {
       this.startSoloTimer(gameId, userId, gs, playerIds, app);
@@ -403,7 +417,7 @@ export class GameController {
     }
 
     gs.drawCards(userId, (gs as any).drawBuffer > 0 ? (gs as any).drawBuffer : 1);
-    this.clearSoloTimer(gameId, userId); // hand changed — cancel any pending penalty
+    this.clearSoloTimer(gameId, userId);
 
     const logger = this.gameLoggers.get(gameId);
     logger?.log(userId, "DRAW_CARD", `Player drew card(s)`);
@@ -434,6 +448,22 @@ export class GameController {
       const r = gs.getResult();
       const winnerId = r?.winner ?? -1;
       const winnerNickname = this.playerNicknames.get(winnerId) ?? "";
+      try {
+        await app.prisma.$transaction([
+          app.prisma.user.updateMany({
+            where: { id: { in: playerIds } },
+            data:  { gamesPlayed: { increment: 1 } },
+          }),
+          app.prisma.user.update({
+            where: { id: winnerId },
+            data:  { totalWins: { increment: 1 } },
+          }),
+          app.prisma.gameSession.update({
+            where: { id: gameId },
+            data:  { status: "ENDED" },
+          }),
+        ]);
+      } catch (_) { /* game state still cleaned up */ }
       app.io.to(`${gameId}`).emit("game_finished", { winnerId, winnerNickname });
       logger?.system("GAME_FINISHED", `Winner: ${winnerNickname}`);
       logger?.close();
@@ -445,7 +475,6 @@ export class GameController {
     const nextId = playerIds[gs.currentPlayerIndex]!;
     broadcastTurn(playerIds, nextId, app);
 
-    // Start solo penalty timer if the wild player just reached 1 card
     const wildRemaining = (gs as any).playerHands.get(userId) as any[] | undefined;
     if (wildRemaining?.length === 1 && !gs.isGameOver()) {
       this.startSoloTimer(gameId, userId, gs, playerIds, app);
@@ -457,7 +486,6 @@ export class GameController {
     const { gameId, userId } = data;
     const numUserId = Number(userId);
 
-    // Re-join socket rooms in case this player missed the original broadcast
     socket.join(`${gameId}`);
     socket.join(`user_${numUserId}`);
     socket.data.userId = numUserId;
@@ -492,14 +520,12 @@ export class GameController {
     if (!hand || hand.length !== 1) return;
 
     this.soloCalledBy.set(gameId, userId);
-    this.clearSoloTimer(gameId, userId); // solo called in time — cancel penalty
+    this.clearSoloTimer(gameId, userId); 
 
     const logger = this.gameLoggers.get(gameId);
     logger?.log(userId, "SAY_SOLO", `Player called SOLO`);
 
-    // Tell the caller (no slot — just trigger their visual effect)
     app.io.to(`user_${userId}`).emit("say_solo", { slot: null });
-    // Tell everyone else with the slot from their perspective so the catch button appears
     for (const pid of playerIds) {
       if (pid === userId) continue;
       const slot = getSlot(playerIds, pid, userId);
@@ -515,25 +541,33 @@ export class GameController {
     const playerIds = this.gamePlayerIds.get(gameId);
     if (!gs || !playerIds) return;
 
-    // Debounce: reject repeated catch attempts within 2 seconds from the same user
     const cooldownKey = `${gameId}_${userId}`;
     const lastCatch = this.catchCooldowns.get(cooldownKey) ?? 0;
     if (Date.now() - lastCatch < 2000) return;
     this.catchCooldowns.set(cooldownKey, Date.now());
 
-    const soloPlayerId = this.soloCalledBy.get(gameId);
-    const targetId = getTargetIdBySlot(playerIds, userId, slot);
+    const soloCalledId = this.soloCalledBy.get(gameId);
+    const targetId     = getTargetIdBySlot(playerIds, userId, slot);
 
     const logger = this.gameLoggers.get(gameId);
 
-    if (!soloPlayerId || soloPlayerId !== targetId) {
+    const targetHand      = (gs as any).playerHands.get(targetId) as any[] | undefined;
+    const targetHas1      = targetHand?.length === 1;
+    const targetProtected = soloCalledId === targetId;
+
+    if (!targetId || !targetHas1 || targetProtected) {
       forceDrawCards(gs, userId, 2);
       logger?.log(userId, "CATCH_SOLO", "Bad catch — drew 2");
     } else {
-      forceDrawCards(gs, soloPlayerId, 2);
-      this.soloCalledBy.set(gameId, null);
-      this.catchCooldowns.delete(cooldownKey); // reset after successful catch
-      logger?.log(userId, "CATCH_SOLO", "Caught player " + soloPlayerId + " — they drew 2");
+      const claimKey  = `${gameId}_${targetId}`;
+      const lastClaim = this.catchClaimed.get(claimKey) ?? 0;
+      if (Date.now() - lastClaim < 3000) return;
+      this.catchClaimed.set(claimKey, Date.now());
+      forceDrawCards(gs, targetId, 2);
+      this.clearSoloTimer(gameId, targetId);
+      this.catchCooldowns.delete(cooldownKey);
+      app.io.to(`${gameId}`).emit("catch_triggered", {});
+      logger?.log(userId, "CATCH_SOLO", "Caught player " + targetId + " — they drew 2");
     }
 
     this.broadcastState(gameId, playerIds, gs, app);

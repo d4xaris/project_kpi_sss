@@ -1,5 +1,7 @@
+import { PrismaClient } from "../generated/prisma/client.js";
+
 export class GameService {
-  constructor(private prisma: any) {}
+  constructor(private prisma: PrismaClient) {}
 
   async findActiveSession(userId: number) {
     return this.prisma.gameSession.findFirst({

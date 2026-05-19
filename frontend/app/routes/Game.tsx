@@ -46,6 +46,7 @@ export default function Game() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
   const [showTroll, setShowTroll] = useState(false);
+  const [showRemoteCatchEffect, setShowRemoteCatchEffect] = useState(false);
   const [winExiting, setWinExiting] = useState(false);
   const [hand, setHand] = useState<HandCard[]>([]);
   const [topCard, setTopCard] = useState<Card>({
@@ -85,7 +86,7 @@ export default function Game() {
 
   const { soloCalled, showSoloSplash, soloEffects, handleSolo, triggerSolo } =
     useSolo(hand.length);
-  const { catchTarget, showCatchEffect, handleCatch, triggerForSlot, catchLocked } = useCatch(
+  const { catchTarget, showCatchEffect, handleCatch, triggerForSlot, closeCatchForSlot, catchLocked, clearCatch } = useCatch(
     oppCounts,
     (slot) => {
       setOppCounts((prev) => ({ ...prev, [slot]: prev[slot] + 2 }));
@@ -130,18 +131,29 @@ export default function Game() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Preload all card SVGs so they appear instantly during gameplay
+  // Preload all public assets so they appear instantly during gameplay
   useEffect(() => {
     const colors = ["crimson", "orange", "purple", "yellow"];
     const values = ["0","1","2","3","4","5","6","7","8","9","drawtwo","reverse","skip"];
-    const wilds  = ["wild", "wild_draw4"];
-    const srcs   = [
+    const imgSrcs = [
       ...colors.flatMap(c => values.map(v => `/cards/${c}_${v}.svg`)),
       "/cards/wild.svg",
       "/cards/wild_draw4.svg",
       "/cards/back.svg",
+      "/catch.png",
+      "/solo.svg",
+      "/table.jpg",
+      "/project_sss.png",
+      "/favicon.png",
     ];
-    srcs.forEach(src => { const img = new Image(); img.src = src; });
+    imgSrcs.forEach(src => { const img = new Image(); img.src = src; });
+    ["/sounds/catchsound.mp3", "/sounds/solosound.mp3", "/sounds/click.mp3",
+     "/sounds/gamestart.mp3", "/sounds/start.mp3"].forEach(src => {
+      const a = new Audio(); a.preload = "auto"; a.src = src;
+    });
+    const v = document.createElement("video");
+    v.preload = "auto";
+    v.src = "/shreked.mp4";
   }, []);
 
   // Auto-draw when a draw penalty is active and the player has no card to stack
@@ -252,18 +264,18 @@ export default function Game() {
       "game_finished",
       (data: { winnerId: number; winnerNickname: string }) => {
         setWinner(data.winnerNickname);
-        if (sessionId) {
-          apiFetch(`/game/${sessionId}/finish`, {
-            method: "POST",
-            body: JSON.stringify({ winnerId: data.winnerId }),
-          }).catch(() => {});
-        }
+        // Stats are saved server-side when game_finished is emitted
       },
     );
 
+    socket.on("game_deleted", () => {
+      navigate("/", { replace: true });
+    });
+
     socket.on("say_solo", (data: { slot?: string | null }) => {
       triggerSoloRef.current();
-      if (data?.slot) triggerForSlot(data.slot as any);
+      // Caller is now protected — close their catch window if it was open
+      if (data?.slot) closeCatchForSlot(data.slot as any);
     });
 
     // Someone missed the solo window — server auto-drew 2 cards for them
@@ -272,6 +284,11 @@ export default function Game() {
       if (data.userId === u.id) {
         // It was us — our hand already updated via game_state; nothing extra needed
       }
+    });
+
+    socket.on("catch_triggered", () => {
+      setShowRemoteCatchEffect(true);
+      setTimeout(() => setShowRemoteCatchEffect(false), 1300);
     });
 
     // If the server rejects our move, unlock the UI and pull fresh state
@@ -292,8 +309,10 @@ export default function Game() {
       socket.off("solo_catch_result");
       socket.off("color_chosen");
       socket.off("game_finished");
+      socket.off("game_deleted");
       socket.off("say_solo");
       socket.off("solo_missed");
+      socket.off("catch_triggered");
       socket.off("error_message");
     };
   }, [sessionId]);
@@ -405,17 +424,17 @@ export default function Game() {
 
           <GameActions
             catchTarget={soloCalled ? null : catchTarget}
-            showSolo={hand.length === 1}
+            showSolo={hand.length === 1 && !catchTarget}
             soloCalled={soloCalled}
             catchLocked={catchLocked}
-            onSolo={() => handleSolo(sessionId!, user?.id!)}
+            onSolo={() => { handleSolo(sessionId!, user?.id!); clearCatch(); }}
             onCatch={handleCatch}
           />
         </>
       )}
 
       <SoloEffects showEffects={soloEffects} showSplash={showSoloSplash} />
-      <CatchEffect show={showCatchEffect} />
+      <CatchEffect show={showCatchEffect || showRemoteCatchEffect} />
 
       {showColorPicker && <ColorPicker onPick={handleColorPick} />}
 

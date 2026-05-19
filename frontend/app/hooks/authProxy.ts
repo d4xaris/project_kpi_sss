@@ -8,7 +8,6 @@ interface ProxyConfig {
   onTokenExpired?: () => void;
 }
 
-// simple token-bucket, refills one token per interval up to capacity
 class TokenBucket {
   private tokens: number;
   private readonly cap: number;
@@ -45,7 +44,6 @@ export function configureProxy(next: Partial<ProxyConfig>): void {
   if (next.rateLimitRpm) bucket = new TokenBucket(next.rateLimitRpm);
 }
 
-// temporarily switch strategy, returns a restore function
 export function withStrategy(strategy: AuthStrategy, apiKey?: string) {
   const prev = { strategy: cfg.strategy, apiKey: cfg.apiKey };
   configureProxy({ strategy, apiKey });
@@ -111,8 +109,6 @@ export async function apiFetch(url: string, init: RequestInit = {}): Promise<Res
   let res: Response;
   try {
     res = await send();
-    // Only try to refresh if there is actually a token that could have expired.
-    // Skips refresh on login/register 401s where no token exists yet.
     if (res.status === 401 && cfg.strategy === 'jwt' && localStorage.getItem('token')) {
       const fresh = await refreshToken();
       if (fresh) res = await send();

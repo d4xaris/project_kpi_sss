@@ -46,7 +46,6 @@ export class GameState {
     };
     private reshuffleDiscardIntoDeck() {
         if (this.discard_deck.length === 0) return;
-        // Move discard pile back into deck and shuffle it
         this.deck = this.discard_deck;
         this.discard_deck = [];
         for (let i = this.deck.length - 1; i > 0; i--) {
@@ -58,16 +57,13 @@ export class GameState {
     drawCards(playerId: number, count: number) {
         const hand = this.playerHands.get(playerId);
         if (!hand) return;
-        // Refill deck from discard if running low
         if (this.deck.length < count) {
             this.reshuffleDiscardIntoDeck();
         }
         const actual = Math.min(count, this.deck.length);
         const drawn = this.deck.splice(0, actual);
         hand.push(...drawn);
-        // Clear any pending draw penalty
         this.drawBuffer = 0;
-        // Drawing ends your turn
         this.advanceTurn();
     }
 
@@ -92,7 +88,6 @@ export class GameState {
          if (cardIndex === -1) {
              return { success: false, reason: 'CARD_NOT_IN_HAND' };
          }
-         // When top card is wild, use the active chosen color for validation
          const effectiveTop = (this.topCard.color === 'wild' && activeColor)
              ? { ...this.topCard, color: activeColor as CardColor }
              : this.topCard;
@@ -116,7 +111,6 @@ export class GameState {
                  break
              case 'reverse':
                  this.direction *= -1;
-                 // In a 2-player game, reverse acts like a skip: same player goes again
                  if (this.playerIds.length === 2) this.advanceTurn();
                  this.advanceTurn();
                  break

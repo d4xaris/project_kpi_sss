@@ -10,16 +10,19 @@ export default function Lobby() {
   const { user } = useAuth();
   const { rooms, loading, refresh, joinRoom } = useLobby();
   const [joiningId, setJoiningId] = useState<number | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   const handleJoin = async (room: RoomSummary) => {
     if (joiningId !== null) return;
     setJoiningId(room.id);
-    const ok = await joinRoom(room.id, user?.id ?? 0, user?.nickname ?? '');
-    if (ok) {
+    setJoinError(null);
+    const result = await joinRoom(room.id, user?.id ?? 0, user?.nickname ?? "");
+    if (result.ok) {
       navigate(`/room/${room.id}`, {
         state: { roomName: room.sessionName, hostId: room.hostId, maxPlayers: room.maxPlayers },
       });
     } else {
+      setJoinError(result.error);
       setJoiningId(null);
     }
   };
@@ -50,6 +53,12 @@ export default function Lobby() {
             </div>
           );
         })}
+
+        {joinError && (
+          <p style={{ color: "#ff6b6b", textAlign: "center", fontSize: "0.9rem", marginTop: "8px" }}>
+            {joinError}
+          </p>
+        )}
 
         <div className="create-actions">
           <Button text="Go back" variant="underline" onClick={() => navigate("/play")} />

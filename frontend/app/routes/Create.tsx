@@ -11,13 +11,21 @@ export default function Create() {
   const [roomName, setRoomName] = useState("");
   const [players, setPlayers] = useState(2);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCreate = async () => {
     if (!roomName.trim()) return;
     setLoading(true);
-    const id = await createRoom(roomName.trim(), players);
-    if (id) navigate(`/room/${id}`, { state: { roomName: roomName.trim(), maxPlayers: players, hostId: user?.id } });
-    setLoading(false);
+    setError(null);
+    const result = await createRoom(roomName.trim(), players);
+    if (result.ok) {
+      navigate(`/room/${result.data.id}`, {
+        state: { roomName: roomName.trim(), maxPlayers: players, hostId: user?.id },
+      });
+    } else {
+      setError(result.error);
+      setLoading(false);
+    }
   };
 
   return (
@@ -47,6 +55,12 @@ export default function Create() {
             </div>
           </div>
         </div>
+
+        {error && (
+          <p style={{ color: "#ff6b6b", textAlign: "center", fontSize: "0.9rem", margin: "4px 0 0" }}>
+            {error}
+          </p>
+        )}
 
         <div className="create-actions">
           <Button text="Go back" variant="underline" onClick={() => navigate("/play")} />

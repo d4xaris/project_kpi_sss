@@ -4,11 +4,13 @@ import { sounds } from '~/sounds';
 type Slot = 'top' | 'left' | 'right';
 
 interface UseCatchReturn {
-  catchTarget:      Slot | null;
-  showCatchEffect:  boolean;
-  handleCatch:      (slot: Slot) => void;
-  triggerForSlot:   (slot: Slot) => void;
-  catchLocked:      boolean;
+  catchTarget:       Slot | null;
+  showCatchEffect:   boolean;
+  handleCatch:       (slot: Slot) => void;
+  triggerForSlot:    (slot: Slot) => void;
+  closeCatchForSlot: (slot: Slot) => void;
+  catchLocked:       boolean;
+  clearCatch:        () => void;
 }
 
 export function useCatch(
@@ -23,7 +25,11 @@ export function useCatch(
   const effectTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lockTimer       = useRef<ReturnType<typeof setTimeout> | null>(null);
   const catchLockedRef  = useRef(false);
+  const catchTargetRef  = useRef<Slot | null>(null);
   const prevRef         = useRef({ ...oppCounts });
+
+  // Keep a ref in sync so closeCatchForSlot can read it without stale closure
+  useEffect(() => { catchTargetRef.current = catchTarget; }, [catchTarget]);
 
   useEffect(() => {
     const prev = prevRef.current;
@@ -31,7 +37,11 @@ export function useCatch(
       if (prev[slot] > 1 && oppCounts[slot] === 1) {
         if (timerRef.current) clearTimeout(timerRef.current);
         setCatchTarget(slot);
-        timerRef.current = setTimeout(() => setCatchTarget(null), 3000);
+        catchTargetRef.current = slot;
+        timerRef.current = setTimeout(() => {
+          setCatchTarget(null);
+          catchTargetRef.current = null;
+        }, 3000);
       }
     });
     prevRef.current = { ...oppCounts };
@@ -43,14 +53,33 @@ export function useCatch(
     if (lockTimer.current)   clearTimeout(lockTimer.current);
   }, []);
 
+  // Cancel the catch window entirely (e.g. when local player presses SOLO)
+  const clearCatch = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = null;
+    setCatchTarget(null);
+    catchTargetRef.current = null;
+  };
+
+  // Close catch window only if it targets the given slot
+  // (called when that opponent calls SOLO — they are now protected)
+  const closeCatchForSlot = (slot: Slot) => {
+    if (catchTargetRef.current === slot) {
+      clearCatch();
+    }
+  };
+
   const triggerForSlot = (slot: Slot) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setCatchTarget(slot);
-    timerRef.current = setTimeout(() => setCatchTarget(null), 3000);
+    catchTargetRef.current = slot;
+    timerRef.current = setTimeout(() => {
+      setCatchTarget(null);
+      catchTargetRef.current = null;
+    }, 3000);
   };
 
   const handleCatch = (slot: Slot) => {
-    // Debounce — ignore rapid taps (frontend guard against spam)
     if (catchLockedRef.current) return;
     catchLockedRef.current = true;
     setCatchLocked(true);
@@ -62,6 +91,7 @@ export function useCatch(
 
     if (timerRef.current) clearTimeout(timerRef.current);
     setCatchTarget(null);
+    catchTargetRef.current = null;
 
     sounds.catch();
     setShowCatchEffect(true);
@@ -71,5 +101,13 @@ export function useCatch(
     onCatch(slot);
   };
 
-  return { catchTarget, showCatchEffect, handleCatch, triggerForSlot, catchLocked };
+  return {
+    catchTarget,
+    showCatchEffect,
+    handleCatch,
+    triggerForSlot,
+    closeCatchForSlot,
+    catchLocked,
+    clearCatch,
+  };
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { apiFetch } from "./useAuth";
 import { getSocket, connectSocket } from "~/socket/client";
 
+type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 
 export interface RoomSummary {
   id: number;
@@ -71,9 +72,13 @@ export function useLobby() {
     roomId: number,
     userId: number,
     nickname: string,
-  ): Promise<boolean> => {
+  ): Promise<Result<void>> => {
     const res = await apiFetch(`/game/${roomId}/join`, { method: "POST" });
-    return res.ok;
+    if (!res.ok) {
+      const data = await res.json();
+      return { ok: false, error: data.message ?? "Failed to join room" };
+    }
+    return { ok: true, data: undefined };
   };
 
   return { rooms, loading, refresh: fetchRooms, joinRoom };
