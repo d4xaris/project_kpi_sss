@@ -101,7 +101,7 @@ yarn dev
 
 ## Lab 1. Generators and Iterators · [@X0nexed](https://github.com/X0nexed)
 For example:
-**[backend\src\game\GameState.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/game/GameState.ts#L41-L44)**
+**[backend\src\game\GameState.ts](https://github.com/d4xaris/project_kpi_sss/blob/main/backend/src/game/GameState.ts#L41-L44)**
 ```bash
             for (const ids of this.playerIds) {
             const hand = this.deck.splice(0, 7);
@@ -209,34 +209,74 @@ project_kpi_sss
     ├── vite.config.ts
     └── yarn.lock
 ```
-## Lab 3. Implementing a Memoization Function · [@Honike-1](https://github.com/Honike-1)
+## Lab 3. Implementing a Memoization Function · [@X0nexed](https://github.com/X0nexed)
 For example: 
-**[backend\src\game\memo.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/game/memo.ts#L1-L22)**
+**[backend\src\game\memo.ts](https://github.com/d4xaris/project_kpi_sss/blob/main/backend/src/game/memo.ts#L43-L104)**
 ```bash
-class QNode<T> { constructor(public value: T, public next: QNode<T> | null = null) {} }
+export function memoize<A extends unknown[], R>(
+  fn:   (...args: A) => R,
+  opts: MemoOptions<R> = {},
+): (...args: A) => R {
+  const { maxSize, policy = 'lru', ttlMs, customEvict } = opts;
+  const cache    = new Map<string, Entry<R>>();
+  const ttlQueue = new Queue<string>();
 
-class Queue<T> {
-  private head: QNode<T> | null = null;
-  private tail: QNode<T> | null = null;
-  size = 0;
+  const key = (args: A) => JSON.stringify(args);
 
-  enqueue(v: T): void {
-    const n = new QNode(v);
-    this.tail ? (this.tail.next = n) : (this.head = n);
-    this.tail = n;
-    this.size++;
-  }
+  const evict = () => {
+    if (!maxSize || cache.size < maxSize) return;
+    let victim: string | undefined;
+    if (policy === 'lru') {
+      let min = Infinity;
+      for (const [k, e] of cache) if (e.lastUsed < min) { min = e.lastUsed; victim = k; }
+    } else if (policy === 'lfu') {
+      let min = Infinity;
+      for (const [k, e] of cache) if (e.useCount < min) { min = e.useCount; victim = k; }
+    } else if (policy === 'ttl') {
+      victim = ttlQueue.dequeue();
+    } else {
+      if (!customEvict) throw new Error('customEvict required');
+      victim = customEvict(cache);
+    }
+    if (victim) cache.delete(victim);
+  };
 
-  dequeue(): T | undefined {
-    if (!this.head) return undefined;
-    const v = this.head.value;
-    this.head = this.head.next;
-    if (!this.head) this.tail = null;
-    this.size--;
-    return v;
-  }
+  const pruneExpired = () => {
+    if (policy !== 'ttl') return;
+    const now = Date.now();
+    while (ttlQueue.peek()) {
+      const k = ttlQueue.peek()!;
+      const e = cache.get(k);
+      if (e && e.expiresAt !== undefined && e.expiresAt <= now) {
+        cache.delete(k);
+        ttlQueue.dequeue();
+      } else break;
+    }
+  };
+
+  return (...args: A): R => {
+    pruneExpired();
+    const k = key(args);
+    if (cache.has(k)) {
+      const e = cache.get(k)!;
+      e.lastUsed = Date.now();
+      e.useCount++;
+      return e.value;
+    }
+    evict();
+    const value = fn(...args);
+    cache.set(k, {
+      value,
+      lastUsed:  Date.now(),
+      useCount:  1,
+      expiresAt: policy === 'ttl' && ttlMs ? Date.now() + ttlMs : undefined,
+    });
+    if (policy === 'ttl') ttlQueue.enqueue(k);
+    return value;
+  };
+}
 ```
-**[backend\src\game\rules.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/game/rules.ts#L1-L11)**
+**[backend\src\game\rules.ts](https://github.com/d4xaris/project_kpi_sss/blob/main/backend/src/game/rules.ts#L1-L11)**
 ```bash
 import { type Card } from "./shared.js";
 import { memoize } from "./memo.js";
@@ -250,9 +290,9 @@ function _canPlayCards(topCard: Card, hand: Card): boolean {
 
 export const canPlayCards = memoize(_canPlayCards, { maxSize: 512, policy: 'lru' });
 ```
-## Lab 4. Implementing a Bi-Directional Priority Queue · [@Honike-1](https://github.com/Honike-1)
+## Lab 4. Implementing a Bi-Directional Priority Queue · [@X0nexed](https://github.com/X0nexed)
 For example: 
-**[backend\src\game\BiDiPriorityQueue.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/game/BiDiPriorityQueue.ts#L17-L46)**
+**[backend\src\game\BiDiPriorityQueue.ts](https://github.com/d4xaris/project_kpi_sss/blob/main/backend/src/game/BiDiPriorityQueue.ts#L16-L46)**
 ```bash
   enqueue(value: T, priority: number): void {
     this.items.push({ value, priority, insertedAt: this.counter++ });
@@ -285,7 +325,7 @@ For example:
     return target;
   }
 ```
-**[backend\src\game\GameRoom.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/game/GameRoom.ts#L18-L31)**
+**[backend\src\game\GameRoom.ts](https://github.com/d4xaris/project_kpi_sss/blob/main/backend/src/game/GameRoom.ts#L16-L30)**
 ```bash
   pushDrawAction(targetId: number, amount: number): void {
     this.actionQueue.enqueue({ type: 'draw', targetId, amount }, amount);
@@ -305,7 +345,7 @@ For example:
 ```
 ## Lab 5. Async Array Function Variants · [@Honike-1](https://github.com/Honike-1)
 For example:
-**[backend\src\routes\auth.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/routes/auth.ts#L29-L66)**
+**[backend\src\routes\auth.ts](https://github.com/d4xaris/project_kpi_sss/blob/main/backend/src/routes/auth.ts#L34-L68)**
 ```bash
   app.post(
     "/registration",
@@ -342,7 +382,7 @@ For example:
 ```
 ## Lab 6. Large Data Processing with Streams or Async Iterators · [@Honike-1](https://github.com/Honike-1) & [@d4xaris](https://github.com/d4xaris) 
 For example:
-**[backend/src/game/logger/logger.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/game/logger/logger.tss#L18-L62)**
+**[backend/src/game/logger/logger.ts](https://github.com/d4xaris/project_kpi_sss/blob/main/backend/src/game/logger/logger.ts#L18-L62)**
 ```bash
 export class GameLogger {
   private formatter: LogFormatter;
@@ -392,17 +432,19 @@ export class GameLogger {
 ```
 ## Lab 7. Reactive Communication with Observables or EventEmitters · [@Honike-1](https://github.com/Honike-1)
 For example:
-**[backend/src/plugins/sockets/controllers.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/plugins/sockets/controllers.ts#L8-L54)**
+**[backend/src/plugins/sockets/controllers.ts](https://github.com/d4xaris/project_kpi_sss/blob/main/backend/src/plugins/sockets/controllers.ts#L93-L147)**
 ```bash
-  @OnSocketEvent("join_room")
+@OnSocketEvent("join_room")
   async handleJoinRoom(socket: Socket, data: any, app: any) {
     try {
       const { gameId, nickname, userId } = data;
 
       socket.join(`${gameId}`);
+      socket.join(`user_${userId}`);
       socket.data.nickname = nickname;
       socket.data.userId = userId;
       socket.data.gameId = gameId;
+      this.playerNicknames.set(userId, nickname);
 
       const session = await app.prisma.gameSession.findUnique({
         where: { id: gameId },
@@ -423,10 +465,9 @@ For example:
         });
       }
 
-      app.io.to(`${gameId}`).emit("joined_player", {
-        id: String(userId),
-        nickname: nickname,
-      });
+      socket
+        .to(`${gameId}`)
+        .emit("joined_player", { id: String(userId), nickname });
 
       app.io.emit("lobby_room_updated", {
         id: String(gameId),
@@ -434,6 +475,13 @@ For example:
       });
 
       socket.emit("current_players", session.players);
+
+      const logger = this.gameLoggers.get(gameId);
+      logger?.log(
+        userId,
+        "PLAYER_JOINED",
+        `Player ${nickname} joined game ${gameId}.`,
+      );
     } catch (err) {
       app.log.error(err);
       socket.emit("error_message", {
@@ -441,27 +489,46 @@ For example:
       });
     }
   }
+
 ```
 
 ## Lab 8. Implementing an Authentication Proxy for an API Service · [@d4xaris](https://github.com/d4xaris) 
 For example:
-**[frontend/app/hooks/authProxy.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/frontend/app/hooks/authProxy.ts#L99-L120)**
+**[frontend/app/hooks/authProxy.ts](https://github.com/d4xaris/project_kpi_sss/blob/main/frontend/app/hooks/authProxy.ts#L99-L129)**
 ```bash
-// drop-in fetch replacement — injects auth, retries on 401, rate-limits, logs
 export async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
   if (!bucket.consume()) {
     throw new Error(`Rate limit exceeded (max ${cfg.rateLimitRpm} req/min)`);
   }
-  const send = () => fetch(url, { ...init, headers: buildHeaders(init.headers) });
-  let res = await send();
-  if (res.status === 401 && cfg.strategy === 'jwt') {
-    const fresh = await refreshToken();
-    if (fresh) res = await send();
+
+  const fullUrl = `${API_BASE}${url}`;
+  const start   = Date.now();
+  const method  = (init.method ?? 'GET').toUpperCase();
+  const send    = () => fetch(fullUrl, { ...init, headers: buildHeaders(init.headers, init.body) });
+
+  let res: Response;
+  try {
+    res = await send();
+    if (res.status === 401 && cfg.strategy === 'jwt' && localStorage.getItem('token')) {
+      const fresh = await refreshToken();
+      if (fresh) res = await send();
+    }
+  } catch (err) {
+    log.push({ timestamp: new Date().toISOString(), method, url: fullUrl, status: 'error', durationMs: Date.now() - start });
+    throw err;
   }
-  ...
+
+  if (cfg.enableLogging) {
+    const entry = { timestamp: new Date().toISOString(), method, url: fullUrl, status: res.status, durationMs: Date.now() - start };
+    log.push(entry);
+    console.log(`%c${res.ok ? '✓' : '✗'} ${method} ${fullUrl} → ${res.status} (${entry.durationMs}ms)`,
+      `color:${res.ok ? '#4caf50' : '#f44336'}`);
+  }
+
+  return res;
 }
 ```
-**[frontend/app/hooks/authProxy.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/frontend/app/hooks/authProxy.ts#L55-L67)**, header injection per strategy
+**[frontend/app/hooks/authProxy.ts](https://github.com/d4xaris/project_kpi_sss/blob/main/frontend/app/hooks/authProxy.ts#L55-L67)**
 ```bash
 function buildHeaders(init?: HeadersInit): Headers {
   const h = new Headers(init);
@@ -474,7 +541,7 @@ function buildHeaders(init?: HeadersInit): Headers {
   return h;
 }
 ```
-**[frontend/app/hooks/useAuth.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/frontend/app/hooks/useAuth.ts#L16-L21)**, proxy configured on app startup
+**[frontend/app/hooks/useAuth.ts](https://github.com/d4xaris/project_kpi_sss/blob/main/frontend/app/hooks/useAuth.ts#L15-L20)**
 ```bash
 configureProxy({
   strategy:       'jwt',
@@ -483,19 +550,6 @@ configureProxy({
   onTokenExpired: () => setUser(null),
 });
 ```
-**[frontend/app/hooks/useGame.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/frontend/app/hooks/useGame.ts#L12-L15)**, всі запити через проксі
-```bash
-const res = await apiFetch("/game/create", {
-  method: "POST",
-  body: JSON.stringify({ sessionName, maxPlayers }),
-});
-```
-**[frontend/app/hooks/useLobby.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/frontend/app/hooks/useLobby.ts#L38-L52)**
-```bash
-const res = await apiFetch("/game/sessions");
-const res = await apiFetch(`/game/${roomId}/join`, { method: "POST" });
-```
-
 ## Lab 9. Implementing a Logging Decorator with Configurable Log Levels · [@Honike-1](https://github.com/Honike-1)
 For example: 
 **[backend/src/plugins/sockets/socket.decorator.ts](https://github.com/d4xaris/project_kpi_sss/blob/dev/backend/src/plugins/sockets/socket.decorator.ts#L1-L9)**
