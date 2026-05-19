@@ -112,25 +112,25 @@ For example:
 ## Lab 2. Project Setup · [@d4xaris](https://github.com/d4xaris) 
 ```bash
 project_kpi_sss
-├── README.md                                                                                                                    
-├── backend                                                                                  
-│   ├── package-lock.json                                                  
-│   ├── package.json                                                                     
-│   ├── prisma                                                                                                                       
-│   │   ├── migrations                                              
-│   │   │   └── migration_lock.toml                                               
-│   │   │                               
-│   │   ├── schema.prisma                                                                
-│   │   └── seed.ts                                                  
-│   ├── prisma.config.ts                                    
+├── README.md
+├── backend
+│   ├── Dockerfile
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── prisma
+│   │   ├── migrations
+│   │   │   └── migration_lock.toml
+│   │   ├── schema.prisma
+│   │   └── seed.ts
+│   ├── prisma.config.ts
 │   ├── src
-│   │   ├── game                                                   
-│   │   │   ├── Deck.ts                                             
-│   │   │   ├── GameRoom.ts
+│   │   ├── game
 │   │   │   ├── BiDiPriorityQueue.ts
-│   │   │   ├── memo.ts                                        
-│   │   │   ├── GameState.ts                       
+│   │   │   ├── Deck.ts
+│   │   │   ├── GameRoom.ts
+│   │   │   ├── GameState.ts
 │   │   │   ├── logger
+│   │   │   ├── memo.ts
 │   │   │   ├── rules.ts
 │   │   │   └── shared.ts
 │   │   ├── generated
@@ -143,9 +143,12 @@ project_kpi_sss
 │   │   │   ├── prisma.ts
 │   │   │   ├── socket.ts
 │   │   │   └── sockets
-│   │   └── routes
-│   │       ├── auth.ts
-│   │       └── game.ts
+│   │   ├── routes
+│   │   │   ├── auth.ts
+│   │   │   └── game.ts
+│   │   └── services
+│   │       ├── AuthService.ts
+│   │       └── GameService.ts
 │   ├── tsconfig.json
 │   └── yarn.lock
 └── frontend
@@ -201,75 +204,6 @@ project_kpi_sss
     │       └── game.ts
     ├── package.json
     ├── public
-    │   ├── cards
-    │   │   ├── back.svg
-    │   │   ├── crimson_0.svg
-    │   │   ├── crimson_1.svg
-    │   │   ├── crimson_2.svg
-    │   │   ├── crimson_3.svg
-    │   │   ├── crimson_4.svg
-    │   │   ├── crimson_5.svg
-    │   │   ├── crimson_6.svg
-    │   │   ├── crimson_7.svg
-    │   │   ├── crimson_8.svg
-    │   │   ├── crimson_9.svg
-    │   │   ├── crimson_drawtwo.svg
-    │   │   ├── crimson_reverse.svg
-    │   │   ├── crimson_skip.svg
-    │   │   ├── orange_0.svg
-    │   │   ├── orange_1.svg
-    │   │   ├── orange_2.svg
-    │   │   ├── orange_3.svg
-    │   │   ├── orange_4.svg
-    │   │   ├── orange_5.svg
-    │   │   ├── orange_6.svg
-    │   │   ├── orange_7.svg
-    │   │   ├── orange_8.svg
-    │   │   ├── orange_9.svg
-    │   │   ├── orange_drawtwo.svg
-    │   │   ├── orange_reverse.svg
-    │   │   ├── orange_skip.svg
-    │   │   ├── purple_0.svg
-    │   │   ├── purple_1.svg
-    │   │   ├── purple_2.svg
-    │   │   ├── purple_3.svg
-    │   │   ├── purple_4.svg
-    │   │   ├── purple_5.svg
-    │   │   ├── purple_6.svg
-    │   │   ├── purple_7.svg
-    │   │   ├── purple_8.svg
-    │   │   ├── purple_9.svg
-    │   │   ├── purple_drawtwo.svg
-    │   │   ├── purple_reverse.svg
-    │   │   ├── purple_skip.svg
-    │   │   ├── troll.svg
-    │   │   ├── wild.svg
-    │   │   ├── wild_draw4.svg
-    │   │   ├── yellow_0.svg
-    │   │   ├── yellow_1.svg
-    │   │   ├── yellow_2.svg
-    │   │   ├── yellow_3.svg
-    │   │   ├── yellow_4.svg
-    │   │   ├── yellow_5.svg
-    │   │   ├── yellow_6.svg
-    │   │   ├── yellow_7.svg
-    │   │   ├── yellow_8.svg
-    │   │   ├── yellow_9.svg
-    │   │   ├── yellow_drawtwo.svg
-    │   │   ├── yellow_reverse.svg
-    │   │   └── yellow_skip.svg
-    │   ├── catch.png
-    │   ├── favicon.png
-    │   ├── project_sss.png
-    │   ├── shreked.mp4
-    │   ├── solo.svg
-    │   ├── sounds
-    │   │   ├── catchsound.mp3
-    │   │   ├── click.mp3
-    │   │   ├── gamestart.mp3
-    │   │   ├── solosound.mp3
-    │   │   └── start.mp3
-    │   └── table.jpg
     ├── react-router.config.ts
     ├── tsconfig.json
     ├── vite.config.ts
