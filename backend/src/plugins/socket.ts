@@ -5,8 +5,6 @@ import type {
   ServerToClient,
   SocketData,
 } from "./sockets/socketTypes.js";
-import { Deck } from "../game/Deck.js";
-import { GameState } from "../game/GameState.js";
 import { registerSocketHandlers } from "./sockets/handler.js";
 import { GameController } from "./sockets/controllers.js";
 
