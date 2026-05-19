@@ -21,13 +21,14 @@ export class GameController {
   private playerNicknames = new Map<number, string>();
   private gameLoggers  = new Map<number, GameLogger>();
   private activeColors = new Map<number, string>();
-  private soloCalledBy   = new Map<number, number | null>();
+  private soloCalledBy   = new Set<string>();
   private soloTimers     = new Map<string, ReturnType<typeof setTimeout>>();
   private catchCooldowns = new Map<string, number>();
   private catchClaimed  = new Map<string, number>();
 
   private startSoloTimer(gameId: number, userId: number, gs: GameState, playerIds: number[], app: any) {
     const key = `${gameId}_${userId}`;
+    this.soloCalledBy.delete(key);
     if (this.soloTimers.has(key)) clearTimeout(this.soloTimers.get(key)!);
     const timer = setTimeout(() => {
       this.soloTimers.delete(key);
@@ -35,8 +36,8 @@ export class GameController {
       const currentPids  = this.gamePlayerIds.get(gameId);
       if (!currentGs || !currentPids) return;
       const hand = (currentGs as any).playerHands.get(userId) as any[] | undefined;
-      if (!hand || hand.length !== 1) return;        
-      if (this.soloCalledBy.get(gameId) === userId) return; 
+      if (!hand || hand.length !== 1) return;
+      if (this.soloCalledBy.has(key)) return;
       forceDrawCards(currentGs, userId, 2);
       app.io.to(`${gameId}`).emit("solo_missed", { userId });
       this.broadcastState(gameId, currentPids, currentGs, app);
@@ -73,7 +74,9 @@ export class GameController {
     this.gameStates.delete(gameId);
     this.gamePlayerIds.delete(gameId);
     this.activeColors.delete(gameId);
-    this.soloCalledBy.delete(gameId);
+    for (const key of [...this.soloCalledBy]) {
+      if (key.startsWith(`${gameId}_`)) this.soloCalledBy.delete(key);
+    }
     for (const key of [...this.soloTimers.keys()]) {
       if (key.startsWith(`${gameId}_`)) {
         clearTimeout(this.soloTimers.get(key)!);
@@ -234,7 +237,6 @@ export class GameController {
 
       this.gameStates.set(gameId, gameState);
       this.gamePlayerIds.set(gameId, playersIds);
-      this.soloCalledBy.set(gameId, null);
 
       for (const player of session.players) {
         if (!this.playerNicknames.has(player.id)) {
@@ -418,6 +420,7 @@ export class GameController {
 
     gs.drawCards(userId, (gs as any).drawBuffer > 0 ? (gs as any).drawBuffer : 1);
     this.clearSoloTimer(gameId, userId);
+    this.soloCalledBy.delete(`${gameId}_${userId}`);
 
     const logger = this.gameLoggers.get(gameId);
     logger?.log(userId, "DRAW_CARD", `Player drew card(s)`);
@@ -519,7 +522,7 @@ export class GameController {
     const hand = (gs as any).playerHands.get(userId) as Card[] | undefined;
     if (!hand || hand.length !== 1) return;
 
-    this.soloCalledBy.set(gameId, userId);
+    this.soloCalledBy.add(`${gameId}_${userId}`);
     this.clearSoloTimer(gameId, userId); 
 
     const logger = this.gameLoggers.get(gameId);
@@ -546,14 +549,13 @@ export class GameController {
     if (Date.now() - lastCatch < 2000) return;
     this.catchCooldowns.set(cooldownKey, Date.now());
 
-    const soloCalledId = this.soloCalledBy.get(gameId);
     const targetId     = getTargetIdBySlot(playerIds, userId, slot);
 
     const logger = this.gameLoggers.get(gameId);
 
     const targetHand      = (gs as any).playerHands.get(targetId) as any[] | undefined;
     const targetHas1      = targetHand?.length === 1;
-    const targetProtected = soloCalledId === targetId;
+    const targetProtected = this.soloCalledBy.has(`${gameId}_${targetId}`);
 
     if (!targetId || !targetHas1 || targetProtected) {
       forceDrawCards(gs, userId, 2);
@@ -565,6 +567,7 @@ export class GameController {
       this.catchClaimed.set(claimKey, Date.now());
       forceDrawCards(gs, targetId, 2);
       this.clearSoloTimer(gameId, targetId);
+      this.soloCalledBy.delete(`${gameId}_${targetId}`);
       this.catchCooldowns.delete(cooldownKey);
       app.io.to(`${gameId}`).emit("catch_triggered", {});
       logger?.log(userId, "CATCH_SOLO", "Caught player " + targetId + " — they drew 2");

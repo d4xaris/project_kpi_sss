@@ -83,7 +83,6 @@ export default function Game() {
   const { catchTarget, showCatchEffect, handleCatch, triggerForSlot, closeCatchForSlot, catchLocked, clearCatch } = useCatch(
     oppCounts,
     (slot) => {
-      setOppCounts((prev) => ({ ...prev, [slot]: prev[slot] + 2 }));
       const u = JSON.parse(localStorage.getItem("user") ?? "{}");
       getSocket().emit("catch_solo", { gameId: sessionId, userId: u.id, slot });
     },
@@ -272,6 +271,7 @@ export default function Game() {
     });
 
     socket.on("catch_triggered", () => {
+      clearCatch();
       setShowRemoteCatchEffect(true);
       setTimeout(() => setShowRemoteCatchEffect(false), 1300);
     });
