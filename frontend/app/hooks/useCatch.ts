@@ -4,9 +4,10 @@ import { sounds } from '~/sounds';
 type Slot = 'top' | 'left' | 'right';
 
 interface UseCatchReturn {
-  catchTarget:     Slot | null;
-  showCatchEffect: boolean;
-  handleCatch:     (slot: Slot) => void;
+  catchTarget:      Slot | null;
+  showCatchEffect:  boolean;
+  handleCatch:      (slot: Slot) => void;
+  triggerForSlot:   (slot: Slot) => void;
 }
 
 export function useCatch(
@@ -37,6 +38,12 @@ export function useCatch(
     if (effectTimer.current) clearTimeout(effectTimer.current);
   }, []);
 
+  const triggerForSlot = (slot: Slot) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setCatchTarget(slot);
+    timerRef.current = setTimeout(() => setCatchTarget(null), 3000);
+  };
+
   const handleCatch = (slot: Slot) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setCatchTarget(null);
@@ -49,5 +56,5 @@ export function useCatch(
     onCatch(slot);
   };
 
-  return { catchTarget, showCatchEffect, handleCatch };
+  return { catchTarget, showCatchEffect, handleCatch, triggerForSlot };
 }

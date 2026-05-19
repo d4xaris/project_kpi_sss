@@ -19,9 +19,38 @@ export class GameController {
   private gameStates = new Map<number, GameState>();
   private gamePlayerIds = new Map<number, number[]>();
   private playerNicknames = new Map<number, string>();
-  private gameLoggers = new Map<number, GameLogger>();
+  private gameLoggers  = new Map<number, GameLogger>();
   private activeColors = new Map<number, string>();
   private soloCalledBy = new Map<number, number | null>();
+  // key: `${gameId}_${userId}` — clears when solo is called or hand changes
+  private soloTimers   = new Map<string, ReturnType<typeof setTimeout>>();
+
+  private startSoloTimer(gameId: number, userId: number, gs: GameState, playerIds: number[], app: any) {
+    const key = `${gameId}_${userId}`;
+    if (this.soloTimers.has(key)) clearTimeout(this.soloTimers.get(key)!);
+    const timer = setTimeout(() => {
+      this.soloTimers.delete(key);
+      const currentGs    = this.gameStates.get(gameId);
+      const currentPids  = this.gamePlayerIds.get(gameId);
+      if (!currentGs || !currentPids) return;
+      const hand = (currentGs as any).playerHands.get(userId) as any[] | undefined;
+      if (!hand || hand.length !== 1) return;        // hand changed — skip
+      if (this.soloCalledBy.get(gameId) === userId) return; // solo was called — skip
+      // Penalize: force draw 2 cards
+      forceDrawCards(currentGs, userId, 2);
+      app.io.to(`${gameId}`).emit("solo_missed", { userId });
+      this.broadcastState(gameId, currentPids, currentGs, app);
+    }, 10_000);
+    this.soloTimers.set(key, timer);
+  }
+
+  private clearSoloTimer(gameId: number, userId: number) {
+    const key = `${gameId}_${userId}`;
+    if (this.soloTimers.has(key)) {
+      clearTimeout(this.soloTimers.get(key)!);
+      this.soloTimers.delete(key);
+    }
+  }
 
   public getLogger(gameId: number): GameLogger | undefined {
     return this.gameLoggers.get(gameId);
@@ -45,6 +74,13 @@ export class GameController {
     this.gamePlayerIds.delete(gameId);
     this.activeColors.delete(gameId);
     this.soloCalledBy.delete(gameId);
+    // Clear any pending solo timers for this game
+    for (const key of [...this.soloTimers.keys()]) {
+      if (key.startsWith(`${gameId}_`)) {
+        clearTimeout(this.soloTimers.get(key)!);
+        this.soloTimers.delete(key);
+      }
+    }
   }
 
   @OnSocketEvent("join_room")
@@ -337,6 +373,12 @@ export class GameController {
     this.broadcastState(gameId, playerIds, gs, app);
     const nextId = playerIds[gs.currentPlayerIndex]!;
     broadcastTurn(playerIds, nextId, app);
+
+    // Start solo penalty timer if the player just reached 1 card
+    const remainingHand = (gs as any).playerHands.get(userId) as any[] | undefined;
+    if (remainingHand?.length === 1 && !gs.isGameOver()) {
+      this.startSoloTimer(gameId, userId, gs, playerIds, app);
+    }
   }
 
   @OnSocketEvent("draw_card")
@@ -354,6 +396,7 @@ export class GameController {
     }
 
     gs.drawCards(userId, (gs as any).drawBuffer > 0 ? (gs as any).drawBuffer : 1);
+    this.clearSoloTimer(gameId, userId); // hand changed — cancel any pending penalty
 
     const logger = this.gameLoggers.get(gameId);
     logger?.log(userId, "DRAW_CARD", `Player drew card(s)`);
@@ -394,6 +437,12 @@ export class GameController {
     this.broadcastState(gameId, playerIds, gs, app);
     const nextId = playerIds[gs.currentPlayerIndex]!;
     broadcastTurn(playerIds, nextId, app);
+
+    // Start solo penalty timer if the wild player just reached 1 card
+    const wildRemaining = (gs as any).playerHands.get(userId) as any[] | undefined;
+    if (wildRemaining?.length === 1 && !gs.isGameOver()) {
+      this.startSoloTimer(gameId, userId, gs, playerIds, app);
+    }
   }
 
   @OnSocketEvent("request_game_state")
@@ -436,11 +485,19 @@ export class GameController {
     if (!hand || hand.length !== 1) return;
 
     this.soloCalledBy.set(gameId, userId);
+    this.clearSoloTimer(gameId, userId); // solo called in time — cancel penalty
 
     const logger = this.gameLoggers.get(gameId);
     logger?.log(userId, "SAY_SOLO", `Player called SOLO`);
 
-    app.io.to(`${gameId}`).emit("say_solo", { userId });
+    // Tell the caller (no slot — just trigger their visual effect)
+    app.io.to(`user_${userId}`).emit("say_solo", { slot: null });
+    // Tell everyone else with the slot from their perspective so the catch button appears
+    for (const pid of playerIds) {
+      if (pid === userId) continue;
+      const slot = getSlot(playerIds, pid, userId);
+      app.io.to(`user_${pid}`).emit("say_solo", { slot });
+    }
   }
 
   @OnSocketEvent("catch_solo")

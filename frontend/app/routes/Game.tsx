@@ -85,7 +85,7 @@ export default function Game() {
 
   const { soloCalled, showSoloSplash, soloEffects, handleSolo, triggerSolo } =
     useSolo(hand.length);
-  const { catchTarget, showCatchEffect, handleCatch } = useCatch(
+  const { catchTarget, showCatchEffect, handleCatch, triggerForSlot } = useCatch(
     oppCounts,
     (slot) => {
       setOppCounts((prev) => ({ ...prev, [slot]: prev[slot] + 2 }));
@@ -121,6 +121,20 @@ export default function Game() {
       getSocket().emit("request_game_state", { gameId: sessionId, userId: u.id });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Preload all card SVGs so they appear instantly during gameplay
+  useEffect(() => {
+    const colors = ["crimson", "orange", "purple", "yellow"];
+    const values = ["0","1","2","3","4","5","6","7","8","9","drawtwo","reverse","skip"];
+    const wilds  = ["wild", "wild_draw4"];
+    const srcs   = [
+      ...colors.flatMap(c => values.map(v => `/cards/${c}_${v}.svg`)),
+      "/cards/wild.svg",
+      "/cards/wild_draw4.svg",
+      "/cards/back.svg",
+    ];
+    srcs.forEach(src => { const img = new Image(); img.src = src; });
+  }, []);
 
   // Auto-draw when a draw penalty is active and the player has no card to stack
   useEffect(() => {
@@ -239,8 +253,17 @@ export default function Game() {
       },
     );
 
-    socket.on("say_solo", () => {
+    socket.on("say_solo", (data: { slot?: string | null }) => {
       triggerSoloRef.current();
+      if (data?.slot) triggerForSlot(data.slot as any);
+    });
+
+    // Someone missed the solo window — server auto-drew 2 cards for them
+    socket.on("solo_missed", (data: { userId: number }) => {
+      const u = JSON.parse(localStorage.getItem("user") ?? "{}");
+      if (data.userId === u.id) {
+        // It was us — our hand already updated via game_state; nothing extra needed
+      }
     });
 
     // If the server rejects our move, unlock the UI and pull fresh state
@@ -262,6 +285,7 @@ export default function Game() {
       socket.off("color_chosen");
       socket.off("game_finished");
       socket.off("say_solo");
+      socket.off("solo_missed");
       socket.off("error_message");
     };
   }, [sessionId]);

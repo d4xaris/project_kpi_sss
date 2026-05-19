@@ -3,7 +3,7 @@ import { useNavigate, useParams, useLocation } from "react-router";
 import Button from "~/components/Button";
 import { useAuth } from "~/hooks/useAuth";
 import { useGame } from "~/hooks/useGame";
-import { getSocket } from "~/socket/client";
+import { getSocket, connectSocket } from "~/socket/client";
 import { sounds } from "~/sounds";
 
 interface Player {
@@ -81,6 +81,7 @@ export default function Room() {
 
   // Register socket listeners once on mount — never re-register, avoids missing events
   useEffect(() => {
+    connectSocket(); // host arrives via Create (no Lobby), so we must connect here
     const socket = getSocket();
 
     socket.on("current_players", (data: Player[]) => {
