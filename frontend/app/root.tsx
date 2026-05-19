@@ -73,7 +73,7 @@ function ErrorPage({ code, title, message }: { code: number; title: string; mess
       <body>
         <div className="home">
           <div className="home-content">
-            <p style={{ fontSize: "3.5rem", margin: 0, lineHeight: 1, fontFamily: ""Hammersmith One", sans-serif" }}>
+            <p style={{ fontSize: "3.5rem", margin: 0, lineHeight: 1, fontFamily: "'Hammersmith One', sans-serif" }}>
               {code}
             </p>
             <p style={{ fontSize: "1.1rem", opacity: 0.8, margin: "0.25rem 0 1.5rem" }}>{title}</p>
@@ -81,7 +81,7 @@ function ErrorPage({ code, title, message }: { code: number; title: string; mess
             <button
               onClick={() => navigate("/")}
               style={{
-                fontFamily: ""Hammersmith One", sans-serif",
+                fontFamily: "'Hammersmith One', sans-serif",
                 fontSize: "1rem",
                 padding: "10px 28px",
                 borderRadius: "12px",
